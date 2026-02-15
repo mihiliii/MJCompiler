@@ -65,20 +65,23 @@ terminal QUESTION, COLON;
 terminal LBRACKET, RBRACKET;
 terminal DOT, LENGTH, NEW;
 terminal MUL, DIV, MOD, MINUS, PLUS;
+terminal EQ, NEQ, GT, GTE, LT, LTE;
 
 nonterminal Program, DeclList;
 nonterminal Const, ConstDecl, ConstDeclNext, ConstDeclList;
 nonterminal Var, VarDecl, VarDeclNext, VarDeclList;
-nonterminal Enum, EnumDecl, EnumDeclNext, EnumDeclList;
+nonterminal Enumerator, EnumeratorDecl, EnumeratorDeclNext, EnumeratorDeclList;
 nonterminal Method, MethodDecl, MethodDeclList, MVarDeclList;
 nonterminal Type;
 nonterminal StatementList, Statement, DesignatorStatement;
-nonterminal Designator, DesignatorList, DesignatorField;
+nonterminal Designator, DesignatorAccess, DesignatorField;
 nonterminal AssignOp, AddOp, TermList;
 nonterminal Expr, Term, Factor;
 nonterminal CondFact;
 nonterminal MulOp, FactorList;
 nonterminal Expression;
+nonterminal ActPars, ActParsNext;
+nonterminal RelOp;
 
 
 Program ::=
@@ -88,7 +91,7 @@ Program ::=
 DeclList ::=
     (DeclListConst) DeclList ConstDeclList
 |   (DeclListVar) DeclList VarDeclList
-|   (DeclListEnum) DeclList EnumDeclList
+|   (DeclListEnumerator) DeclList EnumeratorDeclList
 |   (DeclListE) /* epsilon */
 ;
 
@@ -129,22 +132,22 @@ Var ::=
     (Var) IDENT
 ;
 
-EnumDeclList ::=
-    (EnumDeclList) ENUM IDENT LBRACE EnumDecl EnumDeclNext RBRACE
+EnumeratorDeclList ::=
+    (EnumeratorDeclList) ENUM IDENT LBRACE EnumeratorDecl EnumeratorDeclNext RBRACE
 ;
 
-EnumDeclNext ::=
-    (EnumDeclNextNonE) COMMA EnumDecl EnumDeclNext
-|   (EnumDeclNextE) /* epsilon */
+EnumeratorDeclNext ::=
+    (EnumeratorDeclNextNonE) COMMA EnumeratorDecl EnumeratorDeclNext
+|   (EnumeratorDeclNextE) /* epsilon */
 ;
 
-EnumDecl ::=
-    (EnumDeclAssign) Enum ASSIGN NUMBER
-|   (EnumDeclNonAssign) Enum
+EnumeratorDecl ::=
+    (EnumeratorDeclAssign) Enumerator ASSIGN NUMBER
+|   (EnumeratorDeclNonAssign) Enumerator
 ;
 
-Enum ::=
-    (Enum) IDENT
+Enumerator ::=
+    (Enumerator) IDENT
 ;
 
 MethodDeclList ::=
@@ -184,12 +187,24 @@ Statement ::=
 
 DesignatorStatement ::=
     (DesignatorStatementAssign) Designator AssignOp Expr
+|   (DesignatorStatementFuncNoActPars) Designator LPAREN RPAREN
+|   (DesignatorStatementFuncActPars) Designator LPAREN ActPars RPAREN
 |   (DesignatorStatementInc) Designator INC
 |   (DesignatorStatementDec) Designator DEC
 ;
 
+ActPars ::=
+    (ActPars) Expr ActParsNext
+;
+
+ActParsNext ::=
+    (ActParsNextNonE) COMMA Expr ActParsNext
+|   (ActParsNextE) /* epsilon */
+;
+
 CondFact ::=
-    (CondFact) Expression
+    (CondFactExpr) Expression
+|   (CondFactExprRelOpExpr) Expression RelOp Expression
 ;
 
 Expr ::=
@@ -218,20 +233,23 @@ FactorList ::=
 
 Factor ::=
     (FactorDesignator) Designator
-|   NUMBER
-|   CHAR
-|   BOOL
-|   NEW Type LBRACKET Expr RBRACKET
-|   LPAREN Expr RPAREN
+|   (FactorFuncNoActPars) Designator LPAREN RPAREN
+|   (FactorFuncActPars) Designator LPAREN ActPars RPAREN
+|   (FactorNumber) NUMBER
+|   (FactorChar) CHAR
+|   (FactorBool) BOOL
+|   (FactorNewType) NEW Type LBRACKET Expr RBRACKET
+|   (FactorExpr) LPAREN Expr RPAREN
 ;
 
 Designator ::=
-    (Designator) IDENT DesignatorList
+    (Designator) IDENT DesignatorAccess
 ;
 
-DesignatorList ::=
-    (DesignatorListField) DOT DesignatorField
-|   (DesignatorListArray) DOT LBRACKET Expr RBRACKET
+DesignatorAccess ::=
+    (DesignatorAccessField) DOT DesignatorField
+|   (DesignatorAccessArray) LBRACKET Expr RBRACKET
+|   (DesignatorAccessE) /* epsilon */
 ;
 
 DesignatorField ::=
@@ -241,6 +259,15 @@ DesignatorField ::=
 
 AssignOp ::=
     (AssignOp) ASSIGN
+;
+
+RelOp ::=
+    (RelOpEQ) EQ
+|   (RelOpNEQ) NEQ
+|   (RelOpGT) GT
+|   (RelOpGTE) GTE
+|   (RelOpLT) LT
+|   (RelOpLTE) LTE
 ;
 
 AddOp ::=
