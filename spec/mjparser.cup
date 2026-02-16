@@ -53,19 +53,14 @@ scan with {:
 	return s;
 :}
 
-terminal PROG, LBRACE, RBRACE, CONST, SEMI, ASSIGN, COMMA, ENUM;
+terminal PROG, RETURN, READ, PRINT, LENGTH, NEW, CONST, ENUM, VOID;
+terminal DOT, COLON, COMMA, SEMI;
+terminal LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET;
+terminal ASSIGN, MUL, DIV, MOD, MINUS, PLUS, INC, DEC, EQ, NEQ, GT, GTE, LT, LTE, QUESTION;
 terminal Integer NUMBER;
 terminal Integer BOOL;
 terminal Character CHAR;
 terminal String IDENT;
-terminal VOID, LPAREN, RPAREN;
-terminal RETURN, READ, PRINT;
-terminal INC, DEC;
-terminal QUESTION, COLON;
-terminal LBRACKET, RBRACKET;
-terminal DOT, LENGTH, NEW;
-terminal MUL, DIV, MOD, MINUS, PLUS;
-terminal EQ, NEQ, GT, GTE, LT, LTE;
 
 nonterminal Program, DeclList;
 nonterminal Const, ConstDecl, ConstDeclNext, ConstDeclList;
@@ -75,13 +70,10 @@ nonterminal Method, MethodDecl, MethodDeclList, MVarDeclList;
 nonterminal Type;
 nonterminal StatementList, Statement, DesignatorStatement;
 nonterminal Designator, DesignatorAccess, DesignatorField;
-nonterminal AssignOp, AddOp, TermList;
 nonterminal Expr, Term, Factor;
-nonterminal CondFact;
-nonterminal MulOp, FactorList;
-nonterminal Expression;
+nonterminal Expression, CondFact, FactorList;
+nonterminal AssignOp, AddOp, RelOp, MulOp, TermList;
 nonterminal ActPars, ActParsNext;
-nonterminal RelOp;
 
 
 Program ::=
@@ -93,6 +85,8 @@ DeclList ::=
 |   (DeclListVar) DeclList VarDeclList
 |   (DeclListEnumerator) DeclList EnumeratorDeclList
 |   (DeclListE) /* epsilon */
+|   (DeclListErrorSemi) error SEMI:e {: parser.report_error("Greska na liniji " + eleft, null); :}
+|   (DeclListErrorComma) error COMMA:e {: parser.report_error("Greska na liniji " + eleft, null); :}
 ;
 
 ConstDeclList ::=
@@ -183,6 +177,7 @@ Statement ::=
 |   (StatementRead) READ LPAREN Designator RPAREN SEMI
 |   (StatementPrint) PRINT LPAREN Expr RPAREN SEMI
 |   (StatementPrintWithNumber) PRINT LPAREN Expr COMMA NUMBER RPAREN SEMI
+|   (StatementError) error SEMI:e {: parser.report_error("Greska na liniji " + eleft, null); :}
 ;
 
 DesignatorStatement ::=
