@@ -18,7 +18,7 @@ parser code {:
     }
 
     public void syntax_error(Symbol cur_token) {
-        report_error("\nSintaksna greska", cur_token);
+        report_error("Sintaksna greska", cur_token);
     }
 
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
@@ -85,8 +85,8 @@ DeclList ::=
 |   (DeclListVar) DeclList VarDeclList
 |   (DeclListEnumerator) DeclList EnumeratorDeclList
 |   (DeclListE) /* epsilon */
-|   (DeclListErrorSemi) error SEMI:e {: parser.report_error("Greska na liniji " + eleft, null); :}
-|   (DeclListErrorComma) error COMMA:e {: parser.report_error("Greska na liniji " + eleft, null); :}
+|   (DeclListErrorSemi) error SEMI
+|   (DeclListErrorComma) error COMMA
 ;
 
 ConstDeclList ::=
@@ -177,7 +177,6 @@ Statement ::=
 |   (StatementRead) READ LPAREN Designator RPAREN SEMI
 |   (StatementPrint) PRINT LPAREN Expr RPAREN SEMI
 |   (StatementPrintWithNumber) PRINT LPAREN Expr COMMA NUMBER RPAREN SEMI
-|   (StatementError) error SEMI:e {: parser.report_error("Greska na liniji " + eleft, null); :}
 ;
 
 DesignatorStatement ::=
@@ -186,6 +185,7 @@ DesignatorStatement ::=
 |   (DesignatorStatementFuncActPars) Designator LPAREN ActPars RPAREN
 |   (DesignatorStatementInc) Designator INC
 |   (DesignatorStatementDec) Designator DEC
+|   (DesignatorStatementError) error
 ;
 
 ActPars ::=
