@@ -4,17 +4,19 @@ import java_cup.runtime.*;
 import org.apache.log4j.*;
 import rs.ac.bg.etf.pp1.ast.*;
 
+
+init with {:
+    errorDetected = false;
+:};
+
 parser code {:
 
-	boolean errorDetected = false;
-
-	Logger log = Logger.getLogger(getClass());
-
-    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+	private boolean errorDetected = false;
+    Logger log = Logger.getLogger(getClass());
 
     public void report_fatal_error(String message, Object info) throws java.lang.Exception {
-      done_parsing();
-      report_error(message, info);
+        done_parsing();
+        report_error(message, info);
     }
 
     public void syntax_error(Symbol cur_token) {
@@ -26,32 +28,35 @@ parser code {:
     }
 
     public void report_error(String message, Object info) {
-    	errorDetected = true;
-    	StringBuilder msg = new StringBuilder(message);
-    	if (info instanceof Symbol)
+        errorDetected = true;
+        StringBuilder msg = new StringBuilder(message);
+        if (info instanceof Symbol) {
             msg.append (" na liniji ").append(((Symbol)info).left);
+        }
         log.error(msg.toString());
     }
 
     public void report_info(String message, Object info) {
-    	StringBuilder msg = new StringBuilder(message);
-    	if (info instanceof Symbol)
-            msg.append(" na liniji ").append(((Symbol) info).left);
+        StringBuilder msg = new StringBuilder(message);
+        if (info instanceof Symbol) {
+            msg.append(" na liniji ").append(((Symbol)info).left);
+        }
         log.info(msg.toString());
     }
 
-:}
+    public boolean is_error_detected() {
+        return errorDetected;
+    }
 
-init with {:
-    errorDetected = false;
-:}
+:};
 
 scan with {:
-	Symbol s = this.getScanner().next_token();
-	if (s != null && s.value != null)
-		log.info(s.toString() + " " + s.value.toString());
-	return s;
-:}
+    Symbol symbol = this.getScanner().next_token();
+    if (symbol != null && symbol.value != null) {
+        log.info(symbol.toString() + " " + symbol.value.toString());
+    }
+    return symbol;
+:};
 
 terminal PROG, RETURN, READ, PRINT, LENGTH, NEW, CONST, ENUM, VOID;
 terminal DOT, COLON, COMMA, SEMI;
@@ -62,22 +67,25 @@ terminal Integer BOOL;
 terminal Character CHAR;
 terminal String IDENT;
 
-nonterminal Program, DeclList;
+nonterminal Program, ProgramName, DeclList;
 nonterminal Const, ConstDecl, ConstDeclNext, ConstDeclList;
 nonterminal Var, VarDecl, VarDeclNext, VarDeclList;
 nonterminal Enumerator, EnumeratorDecl, EnumeratorDeclNext, EnumeratorDeclList;
 nonterminal Method, MethodDecl, MethodDeclList, MVarDeclList;
-nonterminal Type;
 nonterminal StatementList, Statement, DesignatorStatement;
 nonterminal Designator, DesignatorAccess, DesignatorField;
-nonterminal Expr, Term, Factor;
+nonterminal Type, Expr, Term, Factor;
 nonterminal Expression, CondFact, FactorList;
 nonterminal AssignOp, AddOp, RelOp, MulOp, TermList;
 nonterminal ActPars, ActParsNext;
 
 
 Program ::=
-    (Program) PROG IDENT DeclList LBRACE MethodDeclList RBRACE
+    (Program) PROG ProgramName DeclList LBRACE MethodDeclList RBRACE
+;
+
+ProgramName ::=
+    (ProgramName) IDENT:name
 ;
 
 DeclList ::=

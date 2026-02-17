@@ -21,25 +21,26 @@ public class MJLexerTest {
 	}
 
 	public static void main(String[] args) throws IOException {
-		Logger log = Logger.getLogger(MJLexerTest.class);
-		Reader br = null;
-		try {
 
+		Logger log = Logger.getLogger(MJLexerTest.class);
+
+		Reader bufferedReader = null;
+		try {
 			File sourceCode = new File("test/program.mj");
 			log.info("Compiling source file: " + sourceCode.getAbsolutePath());
 
-			br = new BufferedReader(new FileReader(sourceCode));
+			bufferedReader = new BufferedReader(new FileReader(sourceCode));
+			Yylex lexer = new Yylex(bufferedReader);
 
-			Yylex lexer = new Yylex(br);
 			Symbol currToken = null;
 			while ((currToken = lexer.next_token()).sym != sym.EOF) {
 				if (currToken != null && currToken.value != null)
 					log.info(currToken.toString() + " " + currToken.value.toString());
 			}
 		} finally {
-			if (br != null)
+			if (bufferedReader != null)
 				try {
-					br.close();
+					bufferedReader.close();
 				} catch (IOException e1) {
 					log.error(e1.getMessage(), e1);
 				}

@@ -25,41 +25,40 @@ public class MJParserTest {
 
 		Logger log = Logger.getLogger(MJParserTest.class);
 
-		Reader br = null;
+		Reader bufferedReader = null;
 		try {
 			File sourceCode = new File("test/program.mj");
 			log.info("Compiling source file: " + sourceCode.getAbsolutePath());
 
-			br = new BufferedReader(new FileReader(sourceCode));
-			Yylex lexer = new Yylex(br);
+			bufferedReader = new BufferedReader(new FileReader(sourceCode));
+			Yylex lexer = new Yylex(bufferedReader);
 
-			MJParser p = new MJParser(lexer);
-			Symbol s = p.parse(); // pocetak parsiranja
+			MJParser parser = new MJParser(lexer);
+			Symbol parseTreeRoot = parser.parse();
 
-			Program prog = (Program) (s.value);
+			Program program = (Program) (parseTreeRoot.value);
 
 			// ispis sintaksnog stabla
-			log.info(prog.toString(""));
+			log.info(program.toString(""));
 			log.info("===================================");
 
 			// ispis prepoznatih programskih konstrukcija
-			RuleVisitor v = new RuleVisitor();
-			prog.traverseBottomUp(v);
+			RuleVisitor visitor = new RuleVisitor();
+			program.traverseBottomUp(visitor);
 
-			log.info("Print count calls = " + v.printCallCount);
+			log.info("Print count calls = " + visitor.printCallCount);
+			log.info("Deklarisanih promenljivih ima = " + visitor.varDeclCount);
 
-			log.info("Deklarisanih promenljivih ima = " + v.varDeclCount);
-
-			if (p.errorDetected) {
-				log.info("Parsiranje nije uspesno zavrseno!");
-			} else {
+			if (!parser.is_error_detected()) {
 				log.info("Parsiranje je uspesno zavrseno!");
+			} else {
+				log.error("Parsiranje nije uspesno zavrseno!");
 			}
 
 		} finally {
-			if (br != null) {
+			if (bufferedReader != null) {
 				try {
-					br.close();
+					bufferedReader.close();
 				} catch (IOException e1) {
 					log.error(e1.getMessage(), e1);
 				}
