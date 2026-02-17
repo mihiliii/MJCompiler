@@ -42,19 +42,19 @@ public class MJParserTest {
 			log.info(prog.toString(""));
 			log.info("===================================");
 
-			// ispis prepoznatih programskih konstrukcija (mozda nepotrebno)
-			// RuleVisitor v = new RuleVisitor();
-			// prog.traverseBottomUp(v);
+			// ispis prepoznatih programskih konstrukcija
+			RuleVisitor v = new RuleVisitor();
+			prog.traverseBottomUp(v);
+
+			log.info("Print count calls = " + v.printCallCount);
+
+			log.info("Deklarisanih promenljivih ima = " + v.varDeclCount);
 
 			if (p.errorDetected) {
 				log.info("Parsiranje nije uspesno zavrseno!");
 			} else {
 				log.info("Parsiranje je uspesno zavrseno!");
 			}
-
-			// log.info(" Print count calls = " + v.printCallCount);
-
-			// log.info(" Deklarisanih promenljivih ima = " + v.varDeclCount);
 
 		} finally {
 			if (br != null) {
