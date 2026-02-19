@@ -2,12 +2,10 @@
 
 program test301
 
-const int a = *;
+const int a = 3;
 
 {
 	void main()
-		int bodovi;
 	{
-        bodovi = *;
 	}
 }

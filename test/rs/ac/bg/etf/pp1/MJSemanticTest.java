@@ -46,7 +46,6 @@ public class MJSemanticTest {
 
             // Inicijalizacija tabele simbola
             Tab.init();
-            initBool();
 
             // Semanticka analiza
             SemanticAnalyzer semAnalyzer = new SemanticAnalyzer();
@@ -64,21 +63,15 @@ public class MJSemanticTest {
             }
 
         } finally {
-            if (bufferedReader != null)
+            if (bufferedReader != null) {
                 try {
                     bufferedReader.close();
                 } catch (IOException e1) {
                     log.error(e1.getMessage(), e1);
                 }
+            }
         }
 
-    }
-
-    private static void initBool() {
-        Struct boolType = new Struct(Struct.Bool);
-        Obj boolObj = Tab.insert(Obj.Type, "bool", boolType);
-        boolObj.setAdr(-1);
-        boolObj.setLevel(-1);
     }
 
 }

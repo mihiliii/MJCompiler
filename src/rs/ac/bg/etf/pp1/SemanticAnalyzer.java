@@ -13,12 +13,18 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private Obj currentProgram;
     private Struct currentType;
     private Struct boolStruct;
+    private Obj boolObj;
     private Const constant;
     private Obj currentMethod;
     private boolean mainHappened;
 
     SemanticAnalyzer() {
-        boolStruct = Tab.find("bool").getType();
+        // Since the symbol table doesnt have a boolean type obj it must be initialized
+        // in the constructor of the semantic analyzer.
+        Struct boolStruct = new Struct(Struct.Bool);
+        boolObj = Tab.insert(Obj.Type, "bool", boolStruct);
+        boolObj.setAdr(-1);
+        boolObj.setLevel(-1);
     }
 
     class Const {
