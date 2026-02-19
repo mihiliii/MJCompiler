@@ -18,9 +18,6 @@ src/**/ast
 logs/
 
 # Eclipse
-.project
-.classpath
-.settings/
 .metadata/
 
 # VS Code
