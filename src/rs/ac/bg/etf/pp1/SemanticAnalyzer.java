@@ -173,7 +173,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(VarDeclArray varDeclArray) {
-        declarationList.append(new Declaration(varDeclArray.getIdent(), new RValue(declarationList.getType(), 0)));
+        declarationList.append(new Declaration(varDeclArray.getIdent(),
+                new RValue(new Struct(Struct.Array, declarationList.getType()), 0)));
     }
 
     @Override
