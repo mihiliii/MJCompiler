@@ -3,9 +3,13 @@
 program test301
 
 const int a = 3;
+const char b = 'b';
+const bool c = true;
+
+int e, f;
 
 {
-	void main()
-	{
-	}
+	void in()
+		int g;
+		{}
 }

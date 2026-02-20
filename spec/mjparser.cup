@@ -4,7 +4,6 @@ import java_cup.runtime.*;
 import org.apache.log4j.*;
 import rs.ac.bg.etf.pp1.ast.*;
 
-
 init with {:
     errorDetected = false;
 :};
@@ -67,14 +66,16 @@ terminal Integer BOOL;
 terminal Character CHAR;
 terminal String IDENT;
 
+nonterminal rs.ac.bg.etf.pp1.RValue Const;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 nonterminal Program, ProgramName, DeclList;
-nonterminal Const, ConstDecl, ConstDeclNext, ConstDeclList;
+nonterminal ConstDecl, ConstDeclNext, ConstDeclList;
 nonterminal VarDecl, VarDeclNext, VarDeclList;
 nonterminal Enumerator, EnumeratorDecl, EnumeratorDeclNext, EnumeratorDeclList;
-nonterminal MethodName, MethodDecl, MethodDeclList, MVarDeclList;
+nonterminal MethodName, MethodDecl, MethodDeclList, MethodVarDeclList;
 nonterminal StatementList, Statement, DesignatorStatement;
 nonterminal Designator, DesignatorAccess, DesignatorField;
-nonterminal Type, Expr, Term, Factor;
+nonterminal Expr, Term, Factor;
 nonterminal Expression, CondFact, FactorList;
 nonterminal AssignOp, AddOp, RelOp, MulOp, TermList;
 nonterminal ActPars, ActParsNext;
@@ -107,7 +108,7 @@ ConstDeclNext ::=
 ;
 
 ConstDecl ::=
-    (ConstDecl) IDENT:name ASSIGN Const
+    (ConstDecl) IDENT:ident ASSIGN Const
 ;
 
 Const ::=
@@ -117,7 +118,7 @@ Const ::=
 ;
 
 VarDeclList ::=
-    (VarDeclListNonE) Type VarDecl VarDeclNext SEMI
+    (VarDeclList) Type VarDecl VarDeclNext SEMI
 ;
 
 VarDeclNext ::=
@@ -126,8 +127,8 @@ VarDeclNext ::=
 ;
 
 VarDecl ::=
-    (VarDeclNonArray) IDENT:name
-|   (VarDeclArray) IDENT:name LBRACKET RBRACKET
+    (VarDeclSingle) IDENT:ident
+|   (VarDeclArray) IDENT:ident LBRACKET RBRACKET
 ;
 
 EnumeratorDeclList ::=
@@ -150,24 +151,24 @@ Enumerator ::=
 
 MethodDeclList ::=
     (MethodDeclListNonE) MethodDeclList MethodDecl
-|   (MetdodDeclListE) /* epsilon */
+|   (MethodDeclListE) /* epsilon */
 ;
 
 MethodDecl ::=
-    (MethodDecl) VOID MethodName LPAREN RPAREN MVarDeclList LBRACE StatementList RBRACE
+    (MethodDecl) VOID MethodName LPAREN RPAREN MethodVarDeclList LBRACE StatementList RBRACE
 ;
 
-MVarDeclList ::=
-    (MVarDeclListNonE) MVarDeclList VarDeclList
+MethodVarDeclList ::=
+    (MVarDeclListNonE) VarDeclList MethodVarDeclList
 |   (MVarDeclListE) /* epsilon */
 ;
 
 MethodName ::=
-    (MethodName) IDENT:name
+    (MethodName) IDENT:methodName
 ;
 
 Type ::=
-    (Type) IDENT:type
+    (Type) IDENT:name
 ;
 
 StatementList ::=

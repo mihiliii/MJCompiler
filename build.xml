@@ -7,6 +7,10 @@
 				<exclude name="util/Log4JUtils.java"/>
 				<exclude name="RuleVisitor.java"/>
 				<exclude name="SemanticAnalyzer.java"/>
+				<exclude name="RValue.java"/>
+				<exclude name="LValue.java"/>
+				<exclude name="Declaration.java"/>
+				<exclude name="DeclarationList.java"/>
 			</fileset>
 		</delete>
 		<delete>
