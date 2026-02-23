@@ -178,6 +178,62 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     @Override
+    public void visit(EnumDeclList enumDeclList) {
+        if (currentMethod != null) {
+            report_error("Enum '" + enumDeclList.getEnumName().getName() + "' must be declared in global scope",
+                    enumDeclList);
+            declarationList = null;
+            return;
+        }
+
+        Obj object = Tab.find(enumDeclList.getEnumName().getName());
+        if (object != Tab.noObj) {
+            report_error("Redefinition of enum '" + enumDeclList.getEnumName().getName() + "'", enumDeclList);
+            declarationList = null;
+            return;
+        }
+
+        Struct enumType = new Struct(Struct.Enum);
+        object = Tab.insert(Obj.Type, enumDeclList.getEnumName().getName(), enumType);
+        Tab.openScope();
+
+        for (Declaration declaration : declarationList.getDeclarationList()) {
+            object = Tab.currentScope.findSymbol(declaration.getIdent());
+
+            if (object != null) {
+                report_error("Multiple enum constants with same name '" + declaration.getIdent() + "'", enumDeclList);
+                return;
+            }
+
+            object = Tab.insert(Obj.Con, declaration.getIdent(), declaration.getRvalue().getType());
+            object.setAdr(declaration.getRvalue().getValue());
+            object.setLevel(1); // NOTE: nisam siguran da li je ovo potrebno
+        }
+
+        Tab.chainLocalSymbols(enumType);
+        Tab.closeScope();
+        declarationList = null;
+    }
+
+    @Override
+    public void visit(EnumName enumName) {
+        declarationList = new DeclarationList();
+    }
+
+    @Override
+    public void visit(EnumDeclAssign enumDeclAssign) {
+        declarationList.append(new Declaration(enumDeclAssign.getEnumField().getName(),
+                new RValue(Tab.intType, enumDeclAssign.getValue())));
+    }
+
+    public void visit(EnumDeclNonAssign enumDeclNonAssign) {
+        int value = declarationList.getLast() == null ? 0 : declarationList.getLast().getRvalue().getValue() + 1;
+
+        declarationList
+                .append(new Declaration(enumDeclNonAssign.getEnumField().getName(), new RValue(Tab.intType, value)));
+    }
+
+    @Override
     public void visit(MethodName methodName) {
         if (methodName.getMethodName().equals("main") || methodName.getMethodName().equals("Main")) {
             mainIncluded = true;

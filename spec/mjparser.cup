@@ -66,19 +66,18 @@ terminal Integer BOOL;
 terminal Character CHAR;
 terminal String IDENT;
 
-nonterminal rs.ac.bg.etf.pp1.RValue Const;
-nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 nonterminal Program, ProgramName, DeclList;
 nonterminal ConstDecl, ConstDeclNext, ConstDeclList;
 nonterminal VarDecl, VarDeclNext, VarDeclList;
-nonterminal Enumerator, EnumeratorDecl, EnumeratorDeclNext, EnumeratorDeclList;
+nonterminal EnumField, EnumName, EnumDecl, EnumDeclNext, EnumDeclList;
 nonterminal MethodName, MethodDecl, MethodDeclList, MethodVarDeclList;
 nonterminal StatementList, Statement, DesignatorStatement;
-nonterminal Designator, DesignatorAccess, DesignatorField;
-nonterminal Expr, Term, Factor;
-nonterminal Expression, CondFact, FactorList;
-nonterminal AssignOp, AddOp, RelOp, MulOp, TermList;
-nonterminal ActPars, ActParsNext;
+nonterminal ActPars, CondFact;
+nonterminal AssignOp, AddOp, RelOp, MulOp;
+
+nonterminal rs.ac.bg.etf.pp1.RValue Const;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Type, Factor, Term, Expression, Expr;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator;
 
 
 Program ::=
@@ -92,7 +91,7 @@ ProgramName ::=
 DeclList ::=
     (DeclListConst) DeclList ConstDeclList
 |   (DeclListVar) DeclList VarDeclList
-|   (DeclListEnumerator) DeclList EnumeratorDeclList
+|   (DeclListEnum) DeclList EnumDeclList
 |   (DeclListE) /* epsilon */
 |   (DeclListErrorSemi) error SEMI
 |   (DeclListErrorComma) error COMMA
@@ -131,22 +130,26 @@ VarDecl ::=
 |   (VarDeclArray) IDENT:ident LBRACKET RBRACKET
 ;
 
-EnumeratorDeclList ::=
-    (EnumeratorDeclList) ENUM IDENT LBRACE EnumeratorDecl EnumeratorDeclNext RBRACE
+EnumDeclList ::=
+    (EnumDeclList) ENUM EnumName LBRACE EnumDecl EnumDeclNext RBRACE
 ;
 
-EnumeratorDeclNext ::=
-    (EnumeratorDeclNextNonE) COMMA EnumeratorDecl EnumeratorDeclNext
-|   (EnumeratorDeclNextE) /* epsilon */
+EnumName ::=
+    (EnumName) IDENT:name
 ;
 
-EnumeratorDecl ::=
-    (EnumeratorDeclAssign) Enumerator ASSIGN NUMBER
-|   (EnumeratorDeclNonAssign) Enumerator
+EnumDeclNext ::=
+    (EnumDeclNextNonE) COMMA EnumDecl EnumDeclNext
+|   (EnumDeclNextE) /* epsilon */
 ;
 
-Enumerator ::=
-    (Enumerator) IDENT
+EnumDecl ::=
+    (EnumDeclAssign) EnumField ASSIGN NUMBER:value
+|   (EnumDeclNonAssign) EnumField
+;
+
+EnumField ::=
+    (EnumField) IDENT:name
 ;
 
 MethodDeclList ::=
@@ -194,12 +197,13 @@ DesignatorStatement ::=
 ;
 
 ActPars ::=
-    (ActPars) Expr ActParsNext
+    (ActParsExpr) Expr
+|   (ActParsCommaExpr) ActPars COMMA Expr
 ;
 
-ActParsNext ::=
-    (ActParsNextNonE) COMMA Expr ActParsNext
-|   (ActParsNextE) /* epsilon */
+Expr ::=
+    (ExprSingle) Expression
+|   (ExprTernary) CondFact QUESTION Expression COLON Expression
 ;
 
 CondFact ::=
@@ -207,28 +211,15 @@ CondFact ::=
 |   (CondFactExprRelOpExpr) Expression RelOp Expression
 ;
 
-Expr ::=
-    (ExprNonT) Expression
-|   (ExprT) CondFact QUESTION Expr COLON Expr
-;
-
 Expression ::=
-    (ExpressionMinus) MINUS Term TermList
-|   (ExpressionPlus) Term TermList
-;
-
-TermList ::=
-    (TermListNonE) TermList AddOp Term
-|   (TermListE) /* epsilon */
+    (ExpressionPlus) Term
+|   (ExpressionAddOpTerm) Expression AddOp Term
+|   (ExpressionMinus) MINUS Term
 ;
 
 Term ::=
-    (Term) Factor FactorList
-;
-
-FactorList ::=
-    (FactorListNonE) FactorList MulOp Factor
-|   (FactorListE) /* epsilon */
+    (TermFactor) Factor
+|   (TermMulOpFactor) Term MulOp Factor
 ;
 
 Factor ::=
@@ -243,18 +234,10 @@ Factor ::=
 ;
 
 Designator ::=
-    (Designator) IDENT DesignatorAccess
-;
-
-DesignatorAccess ::=
-    (DesignatorAccessField) DOT DesignatorField
-|   (DesignatorAccessArray) LBRACKET Expr RBRACKET
-|   (DesignatorAccessE) /* epsilon */
-;
-
-DesignatorField ::=
-    (DesignatorFieldName) IDENT
-|   (DesignatorFieldLength) LENGTH
+    (DesignatorIdent) IDENT:name
+|   (DesignatorField) Designator DOT IDENT:ident
+|   (DesignatorLength) Designator DOT LENGTH:length
+|   (DesignatorArray) Designator LBRACKET Expr:expr RBRACKET
 ;
 
 AssignOp ::=
@@ -271,12 +254,12 @@ RelOp ::=
 ;
 
 AddOp ::=
-    (PLUS) PLUS
-|   (MINUS) MINUS
+    (AddOpPLUS) PLUS
+|   (AddOpMINUS) MINUS
 ;
 
 MulOp ::=
-    (Mul) MUL
-|   (Div) DIV
-|   (MOD) MOD
+    (MulOpMUL) MUL
+|   (MulOpDIV) DIV
+|   (MulOpMOD) MOD
 ;

@@ -33,4 +33,18 @@ public class DeclarationList {
         return this;
     }
 
+    public Declaration getFirst() {
+        if (declarationList.isEmpty()) {
+            return null;
+        }
+        return declarationList.get(0);
+    }
+
+    public Declaration getLast() {
+        if (declarationList.isEmpty()) {
+            return null;
+        }
+        return declarationList.get(declarationList.size() - 1);
+    }
+
 }
