@@ -6,10 +6,12 @@ const int a = 3;
 const char b = 'b';
 const bool c = true;
 
+enum Broj { NULA, JEDAN, PET=5, DESET=10 }
+
 int e, f;
 
 {
-	void in()
+	void main()
 		int g;
 		{}
 }

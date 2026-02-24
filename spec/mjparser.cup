@@ -75,7 +75,7 @@ nonterminal StatementList, Statement, DesignatorStatement;
 nonterminal ActPars, CondFact;
 nonterminal AssignOp, AddOp, RelOp, MulOp;
 
-nonterminal rs.ac.bg.etf.pp1.RValue Const;
+nonterminal rs.ac.bg.etf.pp1.Literal Const;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type, Factor, Term, Expression, Expr;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator;
 

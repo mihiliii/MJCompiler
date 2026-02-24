@@ -5,6 +5,9 @@ import org.apache.log4j.Logger;
 import rs.ac.bg.etf.pp1.ast.*;
 import rs.etf.pp1.symboltable.*;
 import rs.etf.pp1.symboltable.concepts.*;
+import rs.ac.bg.etf.pp1.ast.DesignatorArray;
+import rs.ac.bg.etf.pp1.ast.FactorDesignator;
+import rs.ac.bg.etf.pp1.ast.FactorNumber;
 
 public class SemanticAnalyzer extends VisitorAdaptor {
 
@@ -12,7 +15,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private boolean errorDetected = false;
 
     private final Struct boolType = new Struct(Struct.Bool);
-    private DeclarationList declarationList;
+    private Declaration declaration;
 
     private Obj programObj;
     private Obj boolObj;
@@ -27,6 +30,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             return "char";
         case Struct.Bool:
             return "bool";
+        case Struct.Array:
+            return "array";
+        case Struct.Enum:
+            return "enum";
+        case Struct.Class:
+            return "class";
         default:
             return "unknown";
         }
@@ -84,153 +93,138 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(Type type) {
-        declarationList = new DeclarationList();
+        declaration = new Declaration();
         Obj typeObject = Tab.find(type.getName());
 
         if (typeObject == Tab.noObj) {
             report_error("Unknown type [" + type.getName() + "]", type);
-            declarationList.setType(Tab.noType);
+            declaration.setType(Tab.noType);
         }
         else if (typeObject.getKind() != Obj.Type) {
             report_error("Name [" + type.getName() + "] is not a type", type);
-            declarationList.setType(Tab.noType);
+            declaration.setType(Tab.noType);
         }
         else {
-            declarationList.setType(typeObject.getType());
+            declaration.setType(typeObject.getType());
         }
     }
 
     @Override
     public void visit(ConstDeclList constDeclList) {
-        for (Declaration declaration : declarationList.getDeclarationList()) {
-            Obj object = Tab.find(declaration.getIdent());
-            if (object != Tab.noObj) {
-                report_error("Redefinition of constant '" + declaration.getIdent() + "'", constDeclList);
-            }
-            else {
-                object = Tab.insert(Obj.Con, declaration.getIdent(), declaration.getRvalue().getType());
-                object.setAdr(declaration.getRvalue().getValue());
-            }
-        }
-        declarationList = null;
+        declaration = null;
     }
 
     @Override
     public void visit(ConstDecl constDecl) {
-        RValue rvalue = constDecl.getConst().rvalue;
+        Literal literal = constDecl.getConst().literal;
 
-        if (rvalue.getType().assignableTo(declarationList.getType())) {
-            declarationList.append(new Declaration(constDecl.getIdent(), rvalue));
+        if (literal.getType().assignableTo(declaration.getType())) {
+            declaration.initializeCon(constDecl.getIdent(), literal);
         }
         else {
-            report_error("Cannot initialize constant of type [" + printType(declarationList.getType())
-                    + "] with value of type [" + printType(rvalue.getType()) + "]", constDecl);
+            report_error("Cannot initialize constant of type [" + printType(declaration.getType())
+                    + "] with value of type [" + printType(literal.getType()) + "]", constDecl);
         }
     }
 
     @Override
     public void visit(ConstNumber constNumber) {
-        constNumber.rvalue = new RValue(Tab.intType, constNumber.getValue());
+        constNumber.literal = new Literal(Tab.intType, constNumber.getValue());
     }
 
     @Override
     public void visit(ConstChar constChar) {
-        constChar.rvalue = new RValue(Tab.charType, constChar.getValue());
+        constChar.literal = new Literal(Tab.charType, constChar.getValue());
     }
 
     @Override
     public void visit(ConstBool constBool) {
-        constBool.rvalue = new RValue(boolType, constBool.getValue());
+        constBool.literal = new Literal(boolType, constBool.getValue());
     }
 
     @Override
     public void visit(VarDeclList varDeclList) {
-        for (Declaration declaration : declarationList.getDeclarationList()) {
-            Obj object = null;
-
-            if (currentMethod == null) {
-                object = Tab.find(declaration.getIdent());
-            }
-            else {
-                object = Tab.currentScope.findSymbol(declaration.getIdent());
-            }
-
-            if (object != null && object != Tab.noObj) {
-                report_error("Redefinition of variable '" + declaration.getIdent() + "'", varDeclList);
-            }
-            else {
-                object = Tab.insert(Obj.Var, declaration.getIdent(), declaration.getRvalue().getType());
-                object.setAdr(declaration.getRvalue().getValue());
-            }
-        }
-        declarationList = null;
+        declaration = null;
     }
 
     @Override
     public void visit(VarDeclSingle varDeclSingle) {
-        declarationList.append(new Declaration(varDeclSingle.getIdent(), new RValue(declarationList.getType(), 0)));
+        Obj object = null;
+
+        if (currentMethod == null) {
+            object = Tab.find(varDeclSingle.getIdent());
+        }
+        else {
+            object = Tab.currentScope.findSymbol(varDeclSingle.getIdent());
+        }
+
+        if (object != null && object != Tab.noObj) {
+            report_error("Redefinition of variable '" + varDeclSingle.getIdent() + "'", varDeclSingle);
+            return;
+        }
+        declaration.initializeVar(varDeclSingle.getIdent());
     }
 
     @Override
     public void visit(VarDeclArray varDeclArray) {
-        declarationList.append(new Declaration(varDeclArray.getIdent(),
-                new RValue(new Struct(Struct.Array, declarationList.getType()), 0)));
+        Obj object = null;
+
+        if (currentMethod == null) {
+            object = Tab.find(varDeclArray.getIdent());
+        }
+        else {
+            object = Tab.currentScope().findSymbol(varDeclArray.getIdent());
+        }
+
+        if (object != null && object != Tab.noObj) {
+            report_error("Redefinition of variable '" + varDeclArray.getIdent() + "'", varDeclArray);
+            return;
+        }
+        declaration.initializeVarArray(varDeclArray.getIdent());
     }
 
     @Override
     public void visit(EnumDeclList enumDeclList) {
-        if (currentMethod != null) {
-            report_error("Enum '" + enumDeclList.getEnumName().getName() + "' must be declared in global scope",
-                    enumDeclList);
-            declarationList = null;
-            return;
-        }
-
-        Obj object = Tab.find(enumDeclList.getEnumName().getName());
-        if (object != Tab.noObj) {
-            report_error("Redefinition of enum '" + enumDeclList.getEnumName().getName() + "'", enumDeclList);
-            declarationList = null;
-            return;
-        }
-
-        Struct enumType = new Struct(Struct.Enum);
-        object = Tab.insert(Obj.Type, enumDeclList.getEnumName().getName(), enumType);
-        Tab.openScope();
-
-        for (Declaration declaration : declarationList.getDeclarationList()) {
-            object = Tab.currentScope.findSymbol(declaration.getIdent());
-
-            if (object != null) {
-                report_error("Multiple enum constants with same name '" + declaration.getIdent() + "'", enumDeclList);
-                return;
-            }
-
-            object = Tab.insert(Obj.Con, declaration.getIdent(), declaration.getRvalue().getType());
-            object.setAdr(declaration.getRvalue().getValue());
-            object.setLevel(1); // NOTE: nisam siguran da li je ovo potrebno
-        }
-
-        Tab.chainLocalSymbols(enumType);
+        Tab.chainLocalSymbols(declaration.getType());
         Tab.closeScope();
-        declarationList = null;
+        declaration = null;
     }
 
     @Override
     public void visit(EnumName enumName) {
-        declarationList = new DeclarationList();
+        if (currentMethod != null) {
+            report_error("Enum '" + enumName.getName() + "' must be declared in global scope", enumName);
+            return;
+        }
+
+        Obj object = Tab.find(enumName.getName());
+        if (object != Tab.noObj) {
+            report_error("Redefinition of enum '" + enumName.getName() + "'", enumName);
+            return;
+        }
+        declaration = new Declaration(new Struct(Struct.Enum));
+        declaration.initializeEnum(enumName.getName());
     }
 
     @Override
     public void visit(EnumDeclAssign enumDeclAssign) {
-        declarationList.append(new Declaration(enumDeclAssign.getEnumField().getName(),
-                new RValue(Tab.intType, enumDeclAssign.getValue())));
+        Obj object = Tab.currentScope.findSymbol(enumDeclAssign.getEnumField().getName());
+        if (object != null) {
+            report_error("Multiple enum constants with same name '" + enumDeclAssign.getEnumField().getName() + "'",
+                    enumDeclAssign);
+            return;
+        }
+        declaration.initializeEnumConst(enumDeclAssign.getEnumField().getName(), enumDeclAssign.getValue());
     }
 
     public void visit(EnumDeclNonAssign enumDeclNonAssign) {
-        int value = declarationList.getLast() == null ? 0 : declarationList.getLast().getRvalue().getValue() + 1;
-
-        declarationList
-                .append(new Declaration(enumDeclNonAssign.getEnumField().getName(), new RValue(Tab.intType, value)));
+        Obj object = Tab.currentScope.findSymbol(enumDeclNonAssign.getEnumField().getName());
+        if (object != null) {
+            report_error("Multiple enum constants with same name '" + enumDeclNonAssign.getEnumField().getName() + "'",
+                    enumDeclNonAssign);
+            return;
+        }
+        declaration.initializeEnumConst(enumDeclNonAssign.getEnumField().getName());
     }
 
     @Override
@@ -247,6 +241,61 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         Tab.chainLocalSymbols(currentMethod);
         Tab.closeScope();
         currentMethod = null;
+    }
+
+    @Override
+    public void visit(FactorChar factorChar) {
+        factorChar.struct = Tab.charType;
+    }
+
+    @Override
+    public void visit(FactorNumber factorNumber) {
+        factorNumber.struct = Tab.intType;
+    }
+
+    @Override
+    public void visit(FactorBool factorBool) {
+        factorBool.struct = boolType;
+    }
+
+    @Override
+    public void visit(FactorDesignator factorDesignator) {
+        factorDesignator.struct = factorDesignator.getDesignator().obj.getType();
+    }
+
+    @Override
+    public void visit(DesignatorIdent designatorIdent) {
+        designatorIdent.obj = Tab.find(designatorIdent.getName());
+        if (designatorIdent.obj == Tab.noObj) {
+            report_error("Undeclared identifier '" + designatorIdent.getName() + "'", designatorIdent);
+        }
+    }
+
+    @Override
+    public void visit(DesignatorField designatorField) {
+        Obj object = Tab.find(designatorField.getDesignator().obj.getName());
+        if (object.getType().getKind() == Struct.Enum) {
+            if (Tab.find(designatorField.getIdent()).getKind() == Obj.Con) {
+                designatorField.obj = Tab.find(designatorField.getIdent());
+            }
+            else {
+                report_error("Enum '" + object.getName() + "' does not have a constant named '"
+                        + designatorField.getIdent() + "'", designatorField);
+                designatorField.obj = Tab.noObj;
+            }
+        }
+        else {
+            report_error("Name '" + object.getName() + "' is not an enum", designatorField);
+            designatorField.obj = Tab.noObj;
+        }
+    }
+
+    @Override
+    public void visit(DesignatorArray designatorArray) {
+        Obj object = Tab.find(designatorArray.getDesignator().obj.getName());
+        if (object.getType().getKind() != Struct.Array) {
+            report_error("Name '" + object.getName() + "' is not an array", designatorArray);
+        }
     }
 
 }
