@@ -51,12 +51,10 @@ public class MJSemanticTest {
 
             Tab.dump();
 
-            // log.info(!parser.is_error_detected());
-            // log.info(semAnalyzer.passed());
-
             if (!parser.is_error_detected() && semAnalyzer.passed()) {
                 log.info("Parsiranje uspesno zavrseno!");
-            } else {
+            }
+            else {
                 log.error("Parsiranje NIJE uspesno zavrseno!");
             }
 
@@ -64,7 +62,8 @@ public class MJSemanticTest {
             if (bufferedReader != null) {
                 try {
                     bufferedReader.close();
-                } catch (IOException e1) {
+                }
+                catch (IOException e1) {
                     log.error(e1.getMessage(), e1);
                 }
             }
