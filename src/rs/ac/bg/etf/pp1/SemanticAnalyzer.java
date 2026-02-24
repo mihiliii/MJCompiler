@@ -1,5 +1,7 @@
 package rs.ac.bg.etf.pp1;
 
+import java.util.Collection;
+
 import org.apache.log4j.Logger;
 
 import rs.ac.bg.etf.pp1.ast.*;
@@ -14,13 +16,13 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private Logger log = Logger.getLogger(getClass());
     private boolean errorDetected = false;
 
-    private final Struct boolType = new Struct(Struct.Bool);
-    private Declaration declaration;
-
-    private Obj programObj;
     private Obj boolObj;
+    private Obj programObj;
+    private final Struct boolType = new Struct(Struct.Bool);
+
+    private Declaration declaration;
     private Obj currentMethod;
-    private boolean mainIncluded;
+    private boolean hasMainMethod;
 
     private String printType(Struct type) {
         switch (type.getKind()) {
@@ -39,7 +41,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         default:
             return "unknown";
         }
-
     }
 
     SemanticAnalyzer() {
@@ -86,27 +87,28 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         Tab.chainLocalSymbols(programObj);
         Tab.closeScope();
         programObj = null;
-        if (!mainIncluded) {
+
+        if (hasMainMethod == false) {
             report_error("Main method is needed to run program", null);
         }
     }
 
     @Override
     public void visit(Type type) {
-        declaration = new Declaration();
+        Struct typeStruct = Tab.noType;
         Obj typeObject = Tab.find(type.getName());
 
         if (typeObject == Tab.noObj) {
             report_error("Unknown type [" + type.getName() + "]", type);
-            declaration.setType(Tab.noType);
         }
         else if (typeObject.getKind() != Obj.Type) {
             report_error("Name [" + type.getName() + "] is not a type", type);
-            declaration.setType(Tab.noType);
         }
         else {
-            declaration.setType(typeObject.getType());
+            typeStruct = typeObject.getType();
         }
+
+        declaration = new Declaration(typeStruct);
     }
 
     @Override
@@ -160,9 +162,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         if (object != null && object != Tab.noObj) {
             report_error("Redefinition of variable '" + varDeclSingle.getIdent() + "'", varDeclSingle);
-            return;
         }
-        declaration.initializeVar(varDeclSingle.getIdent());
+        else {
+            declaration.initializeVar(varDeclSingle.getIdent());
+        }
+
     }
 
     @Override
@@ -178,9 +182,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         if (object != null && object != Tab.noObj) {
             report_error("Redefinition of variable '" + varDeclArray.getIdent() + "'", varDeclArray);
-            return;
         }
-        declaration.initializeVarArray(varDeclArray.getIdent());
+        else {
+            declaration.initializeVarArray(varDeclArray.getIdent());
+        }
     }
 
     @Override
@@ -192,45 +197,47 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(EnumName enumName) {
+        Obj object = Tab.find(enumName.getName());
+
         if (currentMethod != null) {
             report_error("Enum '" + enumName.getName() + "' must be declared in global scope", enumName);
-            return;
         }
-
-        Obj object = Tab.find(enumName.getName());
-        if (object != Tab.noObj) {
+        else if (object != Tab.noObj) {
             report_error("Redefinition of enum '" + enumName.getName() + "'", enumName);
-            return;
         }
-        declaration = new Declaration(new Struct(Struct.Enum));
-        declaration.initializeEnum(enumName.getName());
+        else {
+            declaration = new Declaration(new Struct(Struct.Enum));
+            declaration.initializeEnum(enumName.getName());
+        }
     }
 
     @Override
     public void visit(EnumDeclAssign enumDeclAssign) {
         Obj object = Tab.currentScope.findSymbol(enumDeclAssign.getEnumField().getName());
+
         if (object != null) {
-            report_error("Multiple enum constants with same name '" + enumDeclAssign.getEnumField().getName() + "'",
-                    enumDeclAssign);
-            return;
+            report_error("Multiple enum fields with same name '" + object.getName() + "'", enumDeclAssign);
         }
-        declaration.initializeEnumConst(enumDeclAssign.getEnumField().getName(), enumDeclAssign.getValue());
+        else {
+            declaration.initializeEnumConst(enumDeclAssign.getEnumField().getName(), enumDeclAssign.getValue());
+        }
     }
 
     public void visit(EnumDeclNonAssign enumDeclNonAssign) {
         Obj object = Tab.currentScope.findSymbol(enumDeclNonAssign.getEnumField().getName());
+
         if (object != null) {
-            report_error("Multiple enum constants with same name '" + enumDeclNonAssign.getEnumField().getName() + "'",
-                    enumDeclNonAssign);
-            return;
+            report_error("Multiple enum fields with same name '" + object.getName() + "'", enumDeclNonAssign);
         }
-        declaration.initializeEnumConst(enumDeclNonAssign.getEnumField().getName());
+        else {
+            declaration.initializeEnumConst(enumDeclNonAssign.getEnumField().getName());
+        }
     }
 
     @Override
     public void visit(MethodName methodName) {
         if (methodName.getMethodName().equals("main") || methodName.getMethodName().equals("Main")) {
-            mainIncluded = true;
+            hasMainMethod = true;
         }
         currentMethod = Tab.insert(Obj.Meth, methodName.getMethodName(), Tab.noType);
         Tab.openScope();
@@ -266,6 +273,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     @Override
     public void visit(DesignatorIdent designatorIdent) {
         designatorIdent.obj = Tab.find(designatorIdent.getName());
+
         if (designatorIdent.obj == Tab.noObj) {
             report_error("Undeclared identifier '" + designatorIdent.getName() + "'", designatorIdent);
         }
@@ -273,28 +281,62 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(DesignatorField designatorField) {
-        Obj object = Tab.find(designatorField.getDesignator().obj.getName());
-        if (object.getType().getKind() == Struct.Enum) {
-            if (Tab.find(designatorField.getIdent()).getKind() == Obj.Con) {
-                designatorField.obj = Tab.find(designatorField.getIdent());
-            }
-            else {
-                report_error("Enum '" + object.getName() + "' does not have a constant named '"
-                        + designatorField.getIdent() + "'", designatorField);
-                designatorField.obj = Tab.noObj;
-            }
+        Obj object = designatorField.getDesignator().obj;
+
+        if (object == Tab.noObj) {
+            designatorField.obj = Tab.noObj;
         }
-        else {
+        else if (object.getType().getKind() != Struct.Enum) {
             report_error("Name '" + object.getName() + "' is not an enum", designatorField);
             designatorField.obj = Tab.noObj;
         }
+        else {
+            Collection<Obj> enumFields = object.getType().getMembers();
+
+            for (Obj objectField : enumFields) {
+                if (objectField.getName().equals(designatorField.getIdent()) && objectField.getKind() == Obj.Con) {
+                    designatorField.obj = objectField;
+                    return;
+                }
+            }
+
+            report_error(
+                    "Enum '" + object.getName() + "' does not have a field named '" + designatorField.getIdent() + "'",
+                    designatorField);
+            designatorField.obj = Tab.noObj;
+        }
+
     }
 
     @Override
     public void visit(DesignatorArray designatorArray) {
-        Obj object = Tab.find(designatorArray.getDesignator().obj.getName());
-        if (object.getType().getKind() != Struct.Array) {
+        Obj object = designatorArray.getDesignator().obj;
+
+        if (object == Tab.noObj) {
+            designatorArray.obj = Tab.noObj;
+        }
+        else if (object.getType().getKind() != Struct.Array) {
             report_error("Name '" + object.getName() + "' is not an array", designatorArray);
+            designatorArray.obj = Tab.noObj;
+        }
+        else {
+            designatorArray.obj = object;
+        }
+    }
+
+    @Override
+    public void visit(DesignatorLength designatorLength) {
+        Obj object = designatorLength.getDesignator().obj;
+
+        if (object == Tab.noObj) {
+            designatorLength.obj = Tab.noObj;
+        }
+        else if (object.getType().getKind() != Struct.Array) {
+            report_error("Name '" + object.getName() + "' is not an array", designatorLength);
+            designatorLength.obj = Tab.noObj;
+        }
+        else {
+            designatorLength.obj = Tab.find("len");
         }
     }
 
