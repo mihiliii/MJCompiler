@@ -1,7 +1,5 @@
 package rs.ac.bg.etf.pp1;
 
-import org.apache.log4j.Logger;
-
 // import java.util.ArrayList;
 
 import rs.etf.pp1.symboltable.*;
@@ -45,9 +43,10 @@ public class Declaration {
     }
 
     public boolean initializeEnum(String ident) {
-        this.type = new Struct(Struct.Enum);
+        if (this.type == Tab.noType) {
+            return false;
+        }
         Tab.insert(Obj.Type, ident, type);
-        Tab.openScope();
         return true;
     }
 

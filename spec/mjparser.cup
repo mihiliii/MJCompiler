@@ -71,13 +71,13 @@ nonterminal ConstDecl, ConstDeclNext, ConstDeclList;
 nonterminal VarDecl, VarDeclNext, VarDeclList;
 nonterminal EnumField, EnumName, EnumDecl, EnumDeclNext, EnumDeclList;
 nonterminal MethodName, MethodDecl, MethodDeclList, MethodVarDeclList;
-nonterminal StatementList, Statement, DesignatorStatement;
-nonterminal ActPars, CondFact;
+nonterminal StatementList, Statement;
+nonterminal ActPars;
 nonterminal AssignOp, AddOp, RelOp, MulOp;
 
 nonterminal rs.ac.bg.etf.pp1.Literal Const;
-nonterminal rs.etf.pp1.symboltable.concepts.Struct Type, Factor, Term, Expression, Expr;
-nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Type, Factor, Term, Expression, CondFact, Expr;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorStatement;
 
 
 Program ::=
@@ -85,7 +85,7 @@ Program ::=
 ;
 
 ProgramName ::=
-    (ProgramName) IDENT:name
+    (ProgramName) IDENT:ident
 ;
 
 DeclList ::=
@@ -207,14 +207,14 @@ Expr ::=
 ;
 
 CondFact ::=
-    (CondFactExpr) Expression
-|   (CondFactExprRelOpExpr) Expression RelOp Expression
+    (CondFactExpression) Expression
+|   (CondFactRelOp) Expression RelOp Expression
 ;
 
 Expression ::=
-    (ExpressionPlus) Term
+    (ExpressionTerm) Term
 |   (ExpressionAddOpTerm) Expression AddOp Term
-|   (ExpressionMinus) MINUS Term
+|   (ExpressionMinusTerm) MINUS Term
 ;
 
 Term ::=
