@@ -5,6 +5,7 @@
 			<fileset dir="src/rs/ac/bg/etf/pp1">
 				<exclude name="sym.java"/>
 				<exclude name="util/Log4JUtils.java"/>
+				<exclude name="util/Stringify.java"/>
 				<exclude name="RuleVisitor.java"/>
 				<exclude name="SemanticAnalyzer.java"/>
 				<exclude name="Literal.java"/>
