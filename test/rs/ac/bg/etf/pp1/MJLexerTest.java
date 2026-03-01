@@ -41,7 +41,8 @@ public class MJLexerTest {
 			if (bufferedReader != null)
 				try {
 					bufferedReader.close();
-				} catch (IOException e1) {
+				}
+				catch (IOException e1) {
 					log.error(e1.getMessage(), e1);
 				}
 		}

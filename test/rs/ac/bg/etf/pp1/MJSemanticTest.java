@@ -28,7 +28,7 @@ public class MJSemanticTest {
 
         Reader bufferedReader = null;
         try {
-            File sourceCode = new File("test/program1.mj");
+            File sourceCode = new File("test/program.mj");
             log.info("Compiling source file: " + sourceCode.getAbsolutePath());
 
             bufferedReader = new BufferedReader(new FileReader(sourceCode));

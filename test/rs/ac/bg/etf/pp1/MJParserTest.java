@@ -51,7 +51,8 @@ public class MJParserTest {
 
 			if (!parser.is_error_detected()) {
 				log.info("Parsiranje je uspesno zavrseno!");
-			} else {
+			}
+			else {
 				log.error("Parsiranje nije uspesno zavrseno!");
 			}
 
@@ -59,7 +60,8 @@ public class MJParserTest {
 			if (bufferedReader != null) {
 				try {
 					bufferedReader.close();
-				} catch (IOException e1) {
+				}
+				catch (IOException e1) {
 					log.error(e1.getMessage(), e1);
 				}
 			}

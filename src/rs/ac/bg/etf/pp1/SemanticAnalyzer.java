@@ -1,5 +1,6 @@
 package rs.ac.bg.etf.pp1;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.log4j.Logger;
@@ -24,6 +25,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private boolean hasMainMethod = false;
 
     private Obj currentEnum = null;
+    private ArrayList<Struct> actParsList = new ArrayList<>();
 
     SemanticAnalyzer() {
         boolObj = Tab.insert(Obj.Type, "bool", boolType);
@@ -228,9 +230,13 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(MethodName methodName) {
-        if (methodName.getMethodName().equals("main") || methodName.getMethodName().equals("Main")) {
+        if ((methodName.getMethodName().equals("main")) && !hasMainMethod) {
             hasMainMethod = true;
         }
+        else {
+            report_error("There can be only one method named main", methodName);
+        }
+
         currentMethod = Tab.insert(Obj.Meth, methodName.getMethodName(), Tab.noType);
         Tab.openScope();
     }
@@ -401,6 +407,38 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     @Override
+    public void visit(FactorFuncNoActPars factorFuncNoActPars) {
+        Obj designator = factorFuncNoActPars.getDesignator().obj;
+
+        if (designator == Tab.noObj) {
+            factorFuncNoActPars.struct = Tab.noType;
+        }
+        else if (designator.getKind() != Obj.Meth) {
+            report_error("'" + designator.getName() + "' is not a method", factorFuncNoActPars);
+            factorFuncNoActPars.struct = Tab.noType;
+        }
+        else {
+            factorFuncNoActPars.struct = designator.getType();
+        }
+    }
+
+    @Override
+    public void visit(FactorFuncActPars factorFuncActPars) {
+        Obj designator = factorFuncActPars.getDesignator().obj;
+
+        if (designator == Tab.noObj) {
+            factorFuncActPars.struct = Tab.noType;
+        }
+        else if (designator.getKind() != Obj.Meth) {
+            report_error("'" + designator.getName() + "' is not a method", factorFuncActPars);
+            factorFuncActPars.struct = Tab.noType;
+        }
+        else {
+            factorFuncActPars.struct = designator.getType();
+        }
+    }
+
+    @Override
     public void visit(FactorExpr factorExpr) {
         factorExpr.struct = factorExpr.getExpr().struct;
     }
@@ -425,8 +463,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         if (object == Tab.noObj) {
             designatorField.obj = Tab.noObj;
+            return;
         }
-        else if (object.getType().getKind() != Struct.Enum) {
+
+        if (object.getType().getKind() != Struct.Enum) {
             report_error("Name '" + object.getName() + "' is not an enum", designatorField);
             designatorField.obj = Tab.noObj;
         }
@@ -457,8 +497,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         if (object == Tab.noObj) {
             designatorArray.obj = Tab.noObj;
+            return;
         }
-        else if (object.getType().getKind() != Struct.Array) {
+
+        if (object.getType().getKind() != Struct.Array) {
             report_error("Name '" + object.getName() + "' is not an array", designatorArray);
             designatorArray.obj = Tab.noObj;
         }
@@ -478,13 +520,15 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         if (object == Tab.noObj) {
             designatorLength.obj = Tab.noObj;
+            return;
         }
-        else if (object.getType().getKind() != Struct.Array) {
+
+        if (object.getType().getKind() != Struct.Array) {
             report_error("Name '" + object.getName() + "' is not an array", designatorLength);
             designatorLength.obj = Tab.noObj;
         }
         else {
-            designatorLength.obj = Tab.find("len");
+            designatorLength.obj = new Obj(Obj.Con, object.getName() + ".length", Tab.intType);
         }
     }
 
@@ -497,10 +541,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             currentEnum = null;
             return;
         }
-        else if (designator.getKind() != Obj.Var && designator.getKind() != Obj.Elem) {
+
+        if (designator.getKind() != Obj.Var && designator.getKind() != Obj.Elem) {
             report_error("Designator '" + designator.getName() + "' is not a variable", designatorStatementAssign);
         }
-        else if (designator.getType().getKind() == Struct.Enum) {
+        else if (designator.getType().getKind() == Struct.Enum && currentEnum != null) {
             Collection<Obj> enumFields = designator.getType().getMembers();
             boolean found = false;
 
@@ -522,6 +567,179 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
 
         currentEnum = null;
+    }
+
+    @Override
+    public void visit(DesignatorStatementInc designatorStatementInc) {
+        Obj designator = designatorStatementInc.getDesignator().obj;
+
+        if (designator == Tab.noObj) {
+            return;
+        }
+
+        else if (designator.getKind() != Obj.Var && designator.getKind() != Obj.Elem) {
+            report_error("Designator '" + designator.getName() + "' is not a variable", designatorStatementInc);
+        }
+        else if (designator.getType().getKind() != Struct.Int) {
+            report_error("Operator '++' cannot be applied to variable '" + designator.getName() + "' of type ["
+                    + Stringify.toString(designator.getType()) + "]", designatorStatementInc);
+        }
+    }
+
+    @Override
+    public void visit(DesignatorStatementDec designatorStatementDec) {
+        Obj designator = designatorStatementDec.getDesignator().obj;
+
+        if (designator == Tab.noObj) {
+            return;
+        }
+
+        else if (designator.getKind() != Obj.Var && designator.getKind() != Obj.Elem) {
+            report_error("Designator '" + designator.getName() + "' is not a variable", designatorStatementDec);
+        }
+        else if (designator.getType().getKind() != Struct.Int) {
+            report_error("Operator '--' cannot be applied to variable '" + designator.getName() + "' of type ["
+                    + Stringify.toString(designator.getType()) + "]", designatorStatementDec);
+        }
+    }
+
+    @Override
+    public void visit(DesignatorStatementFuncActPars designatorStatementFuncActPars) {
+        String designatorName = designatorStatementFuncActPars.getDesignator().obj.getName();
+        Obj methodObj = Tab.find(designatorName);
+
+        if (methodObj == Tab.noObj) {
+            return;
+        }
+
+        if (methodObj.getKind() != Obj.Meth) {
+            report_error("'" + designatorName + "' is not a method", designatorStatementFuncActPars);
+        }
+    }
+
+    @Override
+    public void visit(DesignatorStatementFuncNoActPars designatorStatementFuncNoActPars) {
+        String designatorName = designatorStatementFuncNoActPars.getDesignator().obj.getName();
+        Obj methodObj = Tab.find(designatorName);
+
+        if (methodObj == Tab.noObj) {
+            return;
+        }
+
+        if (methodObj.getKind() != Obj.Meth) {
+            report_error("'" + designatorName + "' is not a method", designatorStatementFuncNoActPars);
+        }
+    }
+
+    @Override
+    public void visit(StatementRead statementRead) {
+        Obj designator = statementRead.getDesignator().obj;
+
+        if (designator == Tab.noObj) {
+            return;
+        }
+
+        if (designator.getKind() != Obj.Var && designator.getKind() != Obj.Elem) {
+            report_error("Designator '" + designator.getName() + "' is not a variable", statementRead);
+        }
+        else if (designator.getType().getKind() != Struct.Int && designator.getType().getKind() != Struct.Char
+                && designator.getType().getKind() != Struct.Bool) {
+            report_error("Cannot read into variable '" + designator.getName() + "' of type ["
+                    + Stringify.toString(designator.getType()) + "]", statementRead);
+        }
+
+    }
+
+    @Override
+    public void visit(StatementPrint statementPrint) {
+        Struct exprType = statementPrint.getExpr().struct;
+
+        if (exprType == Tab.noType) {
+            return;
+        }
+
+        if (exprType.getKind() != Struct.Int && exprType.getKind() != Struct.Char
+                && exprType.getKind() != Struct.Bool) {
+            report_error("Cannot print expression of type [" + Stringify.toString(exprType) + "]", statementPrint);
+        }
+    }
+
+    @Override
+    public void visit(StatementPrintWithNumber statementPrintWithNumber) {
+        Struct exprType = statementPrintWithNumber.getExpr().struct;
+
+        if (exprType == Tab.noType) {
+            return;
+        }
+
+        if (exprType.getKind() != Struct.Int && exprType.getKind() != Struct.Char
+                && exprType.getKind() != Struct.Bool) {
+            report_error("Cannot print expression of type [" + Stringify.toString(exprType) + "]",
+                    statementPrintWithNumber);
+        }
+    }
+
+    @Override
+    public void visit(ActParsExpr actParsExpr) {
+        actParsList.add(actParsExpr.getExpr().struct);
+
+        Obj designator;
+        if (actParsExpr.getParent() instanceof DesignatorStatementFuncActPars) {
+            designator = ((DesignatorStatementFuncActPars) actParsExpr.getParent()).getDesignator().obj;
+        }
+        else if (actParsExpr.getParent() instanceof FactorFuncActPars) {
+            designator = ((FactorFuncActPars) actParsExpr.getParent()).getDesignator().obj;
+        }
+        else {
+            report_error("Actual parameters can only be used in method call", actParsExpr);
+            return;
+        }
+
+        if (designator == Tab.noObj) {
+            return;
+        }
+        else if (designator.getKind() != Obj.Meth) {
+            report_error("Designator '" + designator.getName() + "' is not a method", actParsExpr);
+            return;
+        }
+        else if (designator.getLevel() != actParsList.size()) {
+            report_error("Method '" + designator.getName() + "' expects " + designator.getAdr() + " arguments, but "
+                    + actParsList.size() + " were given", actParsExpr);
+            return;
+        }
+
+        switch (designator.getName()) {
+        case "ord":
+            if (actParsList.get(0).getKind() != Struct.Char) {
+                report_error("Method 'ord' expects argument of type [char], but ["
+                        + Stringify.toString(actParsList.get(0)) + "] was given", actParsExpr);
+            }
+            return;
+        case "chr":
+            if (actParsList.get(0).getKind() != Struct.Int) {
+                report_error("Method 'chr' expects argument of type [int], but ["
+                        + Stringify.toString(actParsList.get(0)) + "] was given", actParsExpr);
+            }
+            return;
+        case "len":
+            return;
+        }
+
+        for (int i = 0; i < actParsList.size(); i++) {
+            Struct actPar = actParsList.get(i);
+            Struct formPar = designator.getLocalSymbols().toArray(new Struct[0])[i];
+
+            if (!actPar.assignableTo(formPar)) {
+                report_error("Incompatible type of parameter " + (i + 1) + " in method '" + designator.getName()
+                        + "': expected [" + Stringify.toString(formPar) + "], but found [" + Stringify.toString(actPar)
+                        + "]", actParsExpr);
+            }
+        }
+
+    }
+
+    public void visit(ActParsCommaExpr actParsCommaExpr) {
+        this.actParsList.add(actParsCommaExpr.getExpr().struct);
     }
 
 }
