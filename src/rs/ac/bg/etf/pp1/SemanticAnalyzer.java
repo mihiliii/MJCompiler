@@ -5,93 +5,25 @@ import java.util.Collection;
 import org.apache.log4j.Logger;
 
 import rs.ac.bg.etf.pp1.ast.*;
+import rs.ac.bg.etf.pp1.util.*;
 import rs.etf.pp1.symboltable.*;
 import rs.etf.pp1.symboltable.concepts.*;
-import rs.ac.bg.etf.pp1.ast.DesignatorArray;
-import rs.ac.bg.etf.pp1.ast.FactorDesignator;
-import rs.ac.bg.etf.pp1.ast.FactorNumber;
 
 public class SemanticAnalyzer extends VisitorAdaptor {
 
-    private Logger log = Logger.getLogger(getClass());
-    private boolean errorDetected = false;
-
-    private Obj boolObj;
-    private Obj programObj;
+    private final Logger log = Logger.getLogger(getClass());
     private final Struct boolType = new Struct(Struct.Bool);
 
-    private Declaration declaration;
-    private Obj currentMethod;
+    private boolean errorDetected = false;
 
+    private Obj boolObj = null;
+    private Obj programObj = null;
+
+    private Declaration declaration = null;
+    private Obj currentMethod = null;
     private boolean hasMainMethod = false;
 
-    private String toString(Struct type) {
-        switch (type.getKind()) {
-        case Struct.Int:
-            return "int";
-        case Struct.Char:
-            return "char";
-        case Struct.Bool:
-            return "bool";
-        case Struct.Array:
-            return "array";
-        case Struct.Enum:
-            return "enum";
-        case Struct.Class:
-            return "class";
-        case Struct.None:
-            return "notype";
-        default:
-            return "unknown";
-        }
-    }
-
-    private String toString(Object operator) {
-        if (operator instanceof RelOp) {
-            RelOp relOp = (RelOp) operator;
-            if (relOp instanceof RelOpEQ) {
-                return "==";
-            }
-            if (relOp instanceof RelOpNEQ) {
-                return "!=";
-            }
-            if (relOp instanceof RelOpLT) {
-                return "<";
-            }
-            if (relOp instanceof RelOpGT) {
-                return ">";
-            }
-            if (relOp instanceof RelOpLTE) {
-                return "<=";
-            }
-            if (relOp instanceof RelOpGTE) {
-                return ">=";
-            }
-        }
-        else if (operator instanceof AddOp) {
-            AddOp addOp = (AddOp) operator;
-            if (addOp instanceof AddOpPLUS) {
-                return "+";
-            }
-            if (addOp instanceof AddOpMINUS) {
-                return "-";
-            }
-        }
-        else if (operator instanceof MulOp) {
-            MulOp mulOp = (MulOp) operator;
-            if (mulOp instanceof MulOpMUL) {
-                return "*";
-            }
-            if (mulOp instanceof MulOpDIV) {
-                return "/";
-            }
-            if (mulOp instanceof MulOpMOD) {
-                return "%";
-            }
-        }
-        throw new IllegalArgumentException("Unknown operator '" + operator.toString()
-                + "' --- hint: argument must be instance of RelOp, AddOp or MulOp");
-    }
+    private Obj currentEnum = null;
 
     SemanticAnalyzer() {
         boolObj = Tab.insert(Obj.Type, "bool", boolType);
@@ -126,8 +58,13 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(ProgramName programName) {
-        programObj = Tab.insert(Obj.Prog, programName.getIdent(), Tab.noType);
-        Tab.openScope();
+        if (programObj != null) {
+            report_error("Program name already defined", programName);
+        }
+        else {
+            programObj = Tab.insert(Obj.Prog, programName.getIdent(), Tab.noType);
+            Tab.openScope();
+        }
     }
 
     @Override
@@ -174,8 +111,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             declaration.initializeCon(constDecl.getIdent(), literal);
         }
         else {
-            report_error("Cannot initialize constant of type [" + toString(declaration.getType())
-                    + "] with value of type [" + toString(literal.getType()) + "]", constDecl);
+            report_error("Cannot initialize constant of type [" + Stringify.toString(declaration.getType())
+                    + "] with value of type [" + Stringify.toString(literal.getType()) + "]", constDecl);
         }
     }
 
@@ -315,13 +252,14 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         Struct condType = exprTernary.getCondFact().struct;
         Struct leftType = exprTernary.getExpression().struct;
         Struct rightType = exprTernary.getExpression1().struct;
+        currentEnum = null;
 
         if (condType == Tab.noType || leftType == Tab.noType || rightType == Tab.noType) {
             exprTernary.struct = Tab.noType;
         }
         else if (!(leftType.getKind() == rightType.getKind())) {
-            report_error("Ternary operator expressions are not the same type: [" + toString(leftType) + "] and ["
-                    + toString(rightType) + "]", exprTernary);
+            report_error("Ternary operator expressions are not the same type: [" + Stringify.toString(leftType)
+                    + "] and [" + Stringify.toString(rightType) + "]", exprTernary);
             exprTernary.struct = Tab.noType;
         }
         else if (!exprTernary.getCondFact().struct.equals(boolType)) {
@@ -340,11 +278,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(CondFactRelOp condFactRelOp) {
         Struct leftType = condFactRelOp.getExpression().struct;
-        String operator = toString(condFactRelOp.getRelOp());
+        String operator = Stringify.toString(condFactRelOp.getRelOp());
         Struct rightType = condFactRelOp.getExpression1().struct;
 
         if (!leftType.compatibleWith(rightType)) {
-            report_error("Types [" + toString(leftType) + "] and [" + toString(rightType)
+            report_error("Types [" + Stringify.toString(leftType) + "] and [" + Stringify.toString(rightType)
                     + "] are not compatible for operator '" + operator + "'", condFactRelOp);
             condFactRelOp.struct = Tab.noType;
         }
@@ -371,15 +309,19 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(ExpressionAddOpTerm expressionAddOpTerm) {
-        String operator = toString(expressionAddOpTerm.getAddOp());
-        if (!expressionAddOpTerm.getTerm().struct.equals(Tab.intType)) {
+        String operator = Stringify.toString(expressionAddOpTerm.getAddOp());
+        Struct expressionStruct = expressionAddOpTerm.getExpression().struct;
+        Struct termStruct = expressionAddOpTerm.getTerm().struct;
+        currentEnum = null;
+
+        if (termStruct.getKind() != Struct.Int && termStruct.getKind() != Struct.Enum) {
             report_error("Operator '" + operator + "' cannot be used on operand of type ["
-                    + toString(expressionAddOpTerm.getTerm().struct) + "]", expressionAddOpTerm);
+                    + Stringify.toString(termStruct) + "]", expressionAddOpTerm);
             expressionAddOpTerm.struct = Tab.noType;
         }
-        else if (!expressionAddOpTerm.getExpression().struct.equals(Tab.intType)) {
+        else if (expressionStruct.getKind() != Struct.Int && expressionStruct.getKind() != Struct.Enum) {
             report_error("Operator '" + operator + "' cannot be used on operand of type ["
-                    + toString(expressionAddOpTerm.getExpression().struct) + "]", expressionAddOpTerm);
+                    + Stringify.toString(expressionStruct) + "]", expressionAddOpTerm);
             expressionAddOpTerm.struct = Tab.noType;
         }
         else {
@@ -389,9 +331,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(ExpressionMinusTerm expressionMinusTerm) {
-        if (!expressionMinusTerm.getTerm().struct.equals(Tab.intType)) {
-            report_error("Operator '-' cannot be used on operand of type ["
-                    + toString(expressionMinusTerm.getTerm().struct) + "]", expressionMinusTerm);
+        Struct termStruct = expressionMinusTerm.getTerm().struct;
+
+        if (termStruct.getKind() != Struct.Int && termStruct.getKind() != Struct.Enum) {
+            report_error("Operator '-' cannot be used on operand of type [" + Stringify.toString(termStruct) + "]",
+                    expressionMinusTerm);
             expressionMinusTerm.struct = Tab.noType;
         }
         else {
@@ -406,18 +350,19 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(TermMulOpFactor termMulOpFactor) {
-        String operator = toString(termMulOpFactor.getMulOp());
+        String operator = Stringify.toString(termMulOpFactor.getMulOp());
+        Struct termStruct = termMulOpFactor.getTerm().struct;
+        Struct factorStruct = termMulOpFactor.getFactor().struct;
+        currentEnum = null;
 
-        if (!termMulOpFactor.getFactor().struct.equals(Tab.intType)) {
+        if (factorStruct.getKind() != Struct.Int && factorStruct.getKind() != Struct.Enum) {
             report_error("Operator '" + operator + "' cannot be used on operand of type ["
-                    + toString(termMulOpFactor.getFactor().struct) + "]", termMulOpFactor);
-
+                    + Stringify.toString(factorStruct) + "]", termMulOpFactor);
             termMulOpFactor.struct = Tab.noType;
         }
-        else if (!termMulOpFactor.getTerm().struct.equals(Tab.intType)) {
+        else if (termStruct.getKind() != Struct.Int && termStruct.getKind() != Struct.Enum) {
             report_error("Operator '" + operator + "' cannot be used on operand of type ["
-                    + toString(termMulOpFactor.getTerm().struct) + "]", termMulOpFactor);
-
+                    + Stringify.toString(termStruct) + "]", termMulOpFactor);
             termMulOpFactor.struct = Tab.noType;
         }
         else {
@@ -442,12 +387,16 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(FactorNewType factorNewType) {
-        if (!factorNewType.getExpr().struct.equals(Tab.intType)) {
-            report_error("New array must be of type [int]", factorNewType);
+        Struct indexType = factorNewType.getExpr().struct;
+        Struct newType = factorNewType.getType().struct;
+
+        if (indexType.getKind() != Struct.Int && indexType.getKind() != Struct.Enum) {
+            report_error("Array index is not of type [int] nor [enum] ([" + Stringify.toString(indexType) + "])",
+                    factorNewType);
             factorNewType.struct = Tab.noType;
         }
         else {
-            factorNewType.struct = new Struct(Struct.Array, factorNewType.getType().struct);
+            factorNewType.struct = new Struct(Struct.Array, newType);
         }
     }
 
@@ -487,6 +436,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             for (Obj objectField : enumFields) {
                 if (objectField.getName().equals(designatorField.getIdent()) && objectField.getKind() == Obj.Con) {
                     designatorField.obj = objectField;
+                    currentEnum = objectField;
                     return;
                 }
             }
@@ -497,11 +447,13 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             designatorField.obj = Tab.noObj;
         }
 
+        currentEnum = null;
     }
 
     @Override
     public void visit(DesignatorArray designatorArray) {
         Obj object = designatorArray.getDesignator().obj;
+        Struct indexType = designatorArray.getExpr().struct;
 
         if (object == Tab.noObj) {
             designatorArray.obj = Tab.noObj;
@@ -510,8 +462,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             report_error("Name '" + object.getName() + "' is not an array", designatorArray);
             designatorArray.obj = Tab.noObj;
         }
-        else if (!designatorArray.getExpr().struct.equals(Tab.intType)) {
-            report_error("Array index is not of type [int]", designatorArray);
+        else if (indexType.getKind() != Struct.Int && indexType.getKind() != Struct.Enum) {
+            report_error("Array '" + object.getName() + "' index is not of type [int] nor [enum] (["
+                    + Stringify.toString(indexType) + "])", designatorArray);
             designatorArray.obj = Tab.noObj;
         }
         else {
@@ -541,20 +494,34 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         Struct exprType = designatorStatementAssign.getExpr().struct;
 
         if (designator == Tab.noObj || exprType == Tab.noType) {
-            designatorStatementAssign.obj = Tab.noObj;
+            currentEnum = null;
+            return;
         }
         else if (designator.getKind() != Obj.Var && designator.getKind() != Obj.Elem) {
             report_error("Designator '" + designator.getName() + "' is not a variable", designatorStatementAssign);
-            designatorStatementAssign.obj = Tab.noObj;
         }
-        // else if (exprType.equals(Tab.intType)) {
-        // designatorStatementAssign.obj = designator;
-        // }
+        else if (designator.getType().getKind() == Struct.Enum) {
+            Collection<Obj> enumFields = designator.getType().getMembers();
+            boolean found = false;
+
+            for (Obj objectField : enumFields) {
+                if (objectField == currentEnum) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                report_error("Enum value '" + currentEnum.getName() + "' is not the same enum type as variable '"
+                        + designator.getName() + "'", designatorStatementAssign);
+            }
+        }
         else if (!exprType.assignableTo(designator.getType())) {
-            report_error("Cannot assign value of type [" + toString(exprType) + "] to variable of type ["
-                    + toString(designator.getType()) + "]", designatorStatementAssign);
-            designatorStatementAssign.obj = Tab.noObj;
+            report_error("Cannot assign value of type [" + Stringify.toString(exprType) + "] to variable of type ["
+                    + Stringify.toString(designator.getType()) + "]", designatorStatementAssign);
         }
+
+        currentEnum = null;
     }
 
 }
