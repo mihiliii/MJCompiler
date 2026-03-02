@@ -27,6 +27,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private Obj currentEnum = null;
     private ArrayList<Struct> actParsList = new ArrayList<>();
 
+    private int nVars = 0;
+
     SemanticAnalyzer() {
         boolObj = Tab.insert(Obj.Type, "bool", boolType);
         boolObj.setAdr(-1);
@@ -56,6 +58,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         return !errorDetected;
     }
 
+    public int getnVars() {
+        return nVars;
+    }
+
     /* SEM PASS CODE */
 
     @Override
@@ -71,6 +77,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(Program program) {
+        nVars = Tab.currentScope.getnVars();
         Tab.chainLocalSymbols(programObj);
         Tab.closeScope();
 
