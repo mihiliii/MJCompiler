@@ -70,7 +70,7 @@ nonterminal Program, ProgramName, DeclList;
 nonterminal ConstDecl, ConstDeclNext, ConstDeclList;
 nonterminal VarDecl, VarDeclNext, VarDeclList;
 nonterminal EnumField, EnumName, EnumDecl, EnumDeclNext, EnumDeclList;
-nonterminal MethodName, MethodDecl, MethodDeclList, MethodVarDeclList;
+nonterminal MethodDecl, MethodDeclList, MethodVarDeclList;
 nonterminal StatementList, Statement;
 nonterminal ActPars;
 nonterminal AssignOp, AddOp, RelOp, MulOp;

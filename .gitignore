@@ -7,6 +7,10 @@ build/
 dist/
 target/
 
+# Generated obj files
+test/*.obj
+
+
 # Generated lexer/parser files
 src/**/Yylex.java
 src/**/MJParser.java
