@@ -13,7 +13,7 @@ import rs.etf.pp1.symboltable.concepts.*;
 public class SemanticAnalyzer extends VisitorAdaptor {
 
     private final Logger log = Logger.getLogger(getClass());
-    private final Struct boolType = new Struct(Struct.Bool);
+    public static final Struct boolType = new Struct(Struct.Bool);
 
     private boolean errorDetected = false;
 
@@ -244,7 +244,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             report_error("There can be only one method named main", methodName);
         }
 
-        currentMethod = Tab.insert(Obj.Meth, methodName.getMethodName(), Tab.noType);
+        methodName.obj = currentMethod = Tab.insert(Obj.Meth, methodName.getMethodName(), Tab.noType);
         Tab.openScope();
     }
 
