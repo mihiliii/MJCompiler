@@ -535,7 +535,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             designatorLength.obj = Tab.noObj;
         }
         else {
-            designatorLength.obj = new Obj(Obj.Con, object.getName() + ".length", Tab.intType);
+            designatorLength.obj = Tab.find("len");
         }
     }
 

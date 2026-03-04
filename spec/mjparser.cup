@@ -185,7 +185,7 @@ Statement ::=
 |   (StatementReturn) RETURN SEMI
 |   (StatementRead) READ LPAREN Designator RPAREN SEMI
 |   (StatementPrint) PRINT LPAREN Expr RPAREN SEMI
-|   (StatementPrintWithNumber) PRINT LPAREN Expr COMMA NUMBER RPAREN SEMI
+|   (StatementPrintWithNumber) PRINT LPAREN Expr COMMA NUMBER:number RPAREN SEMI
 ;
 
 DesignatorStatement ::=
