@@ -13,6 +13,8 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
 import rs.ac.bg.etf.pp1.ast.Program;
+import rs.ac.bg.etf.pp1.symboltable.DumpSymTabVisitor;
+import rs.ac.bg.etf.pp1.symboltable.SymTab;
 import rs.ac.bg.etf.pp1.util.Log4JUtils;
 import rs.etf.pp1.mj.runtime.Code;
 import rs.etf.pp1.symboltable.Tab;
@@ -45,13 +47,15 @@ public class MJCodeGeneratorTest {
             log.info("===================================");
 
             // Inicijalizacija tabele simbola
-            Tab.init();
+            SymTab.init();
 
             // Semanticka analiza
             SemanticAnalyzer semAnalyzer = new SemanticAnalyzer();
             program.traverseBottomUp(semAnalyzer);
 
-            Tab.dump();
+            DumpSymTabVisitor dumpVisitor = new DumpSymTabVisitor();
+
+            SymTab.dump(dumpVisitor);
 
             if (!parser.is_error_detected() && semAnalyzer.passed()) {
                 log.info("Parsiranje uspesno zavrseno!");
@@ -64,7 +68,7 @@ public class MJCodeGeneratorTest {
                 CodeGenerator codeGenerator = new CodeGenerator();
                 program.traverseBottomUp(codeGenerator);
 
-                Code.dataSize = semAnalyzer.getnVars();
+                Code.dataSize = semAnalyzer.getNumLocalVars();
                 Code.mainPc = codeGenerator.getMainPc();
                 Code.write(new FileOutputStream(objFile));
 

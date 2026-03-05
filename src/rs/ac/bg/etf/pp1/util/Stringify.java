@@ -22,54 +22,53 @@ public class Stringify {
         case Struct.None:
             return "notype";
         default:
-            return "unknown";
+            throw new IllegalArgumentException("Unknown type '" + type.toString() + "'");
         }
     }
 
-    public static String toString(Object operator) {
-        if (operator instanceof RelOp) {
-            RelOp relOp = (RelOp) operator;
-            if (relOp instanceof RelOpEQ) {
-                return "==";
-            }
-            if (relOp instanceof RelOpNEQ) {
-                return "!=";
-            }
-            if (relOp instanceof RelOpLT) {
-                return "<";
-            }
-            if (relOp instanceof RelOpGT) {
-                return ">";
-            }
-            if (relOp instanceof RelOpLTE) {
-                return "<=";
-            }
-            if (relOp instanceof RelOpGTE) {
-                return ">=";
-            }
+    public static String toString(RelOp operator) {
+        if (operator instanceof RelOpEQ) {
+            return "==";
         }
-        else if (operator instanceof AddOp) {
-            AddOp addOp = (AddOp) operator;
-            if (addOp instanceof AddOpPLUS) {
-                return "+";
-            }
-            if (addOp instanceof AddOpMINUS) {
-                return "-";
-            }
+        if (operator instanceof RelOpNEQ) {
+            return "!=";
         }
-        else if (operator instanceof MulOp) {
-            MulOp mulOp = (MulOp) operator;
-            if (mulOp instanceof MulOpMUL) {
-                return "*";
-            }
-            if (mulOp instanceof MulOpDIV) {
-                return "/";
-            }
-            if (mulOp instanceof MulOpMOD) {
-                return "%";
-            }
+        if (operator instanceof RelOpLT) {
+            return "<";
         }
-        throw new IllegalArgumentException("Unknown operator '" + operator.toString()
-                + "' --- hint: argument must be instance of RelOp, AddOp or MulOp");
+        if (operator instanceof RelOpGT) {
+            return ">";
+        }
+        if (operator instanceof RelOpLTE) {
+            return "<=";
+        }
+        if (operator instanceof RelOpGTE) {
+            return ">=";
+        }
+        throw new IllegalArgumentException("Unknown operator '" + operator.toString() + "'");
+    }
+
+    public static String toString(AddOp operator) {
+        if (operator instanceof AddOpPLUS) {
+            return "+";
+        }
+        if (operator instanceof AddOpMINUS) {
+            return "-";
+        }
+        throw new IllegalArgumentException("Unknown operator '" + operator.toString() + "'");
+
+    }
+
+    public static String toString(MulOp operator) {
+        if (operator instanceof MulOpMUL) {
+            return "*";
+        }
+        if (operator instanceof MulOpDIV) {
+            return "/";
+        }
+        if (operator instanceof MulOpMOD) {
+            return "%";
+        }
+        throw new IllegalArgumentException("Unknown operator '" + operator.toString() + "'");
     }
 }

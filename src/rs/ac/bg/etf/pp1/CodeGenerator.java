@@ -4,8 +4,9 @@ import org.apache.log4j.Logger;
 
 import rs.ac.bg.etf.pp1.ast.*;
 import rs.etf.pp1.mj.runtime.Code;
-import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.Obj;
+
+import rs.ac.bg.etf.pp1.symboltable.SymTab;
 
 public class CodeGenerator extends VisitorAdaptor {
 
@@ -19,7 +20,7 @@ public class CodeGenerator extends VisitorAdaptor {
     Logger log = Logger.getLogger(CodeGenerator.class.getName());
 
     public CodeGenerator() {
-        Obj ord = Tab.find("ord");
+        Obj ord = SymTab.find("ord");
         ord.setAdr(Code.pc);
         Code.put(Code.enter);
         Code.put(ord.getLevel());
@@ -28,7 +29,7 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(Code.exit);
         Code.put(Code.return_);
 
-        Obj chr = Tab.find("chr");
+        Obj chr = SymTab.find("chr");
         chr.setAdr(Code.pc);
         Code.put(Code.enter);
         Code.put(chr.getLevel());
@@ -37,7 +38,7 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(Code.exit);
         Code.put(Code.return_);
 
-        Obj len = Tab.find("len");
+        Obj len = SymTab.find("len");
         len.setAdr(Code.pc);
         lengthAdr = Code.pc;
         Code.put(Code.enter);
@@ -49,6 +50,8 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(Code.return_);
 
     }
+
+    /* Method */
 
     @Override
     public void visit(MethodName methodName) {
@@ -69,26 +72,138 @@ public class CodeGenerator extends VisitorAdaptor {
 
     }
 
+    /* Statements */
+
     @Override
-    public void visit(DesignatorIdent designatorIdent) {
-        if (designatorIdent.getParent() instanceof DesignatorArray
-                || designatorIdent.getParent() instanceof DesignatorLength) {
-            Code.load(designatorIdent.obj);
+    public void visit(StatementReturn statementReturn) {
+        Code.put(Code.exit);
+        Code.put(Code.return_);
+    }
+
+    @Override
+    public void visit(StatementRead statementRead) {
+        if (statementRead.getDesignator().obj.getType().equals(SymTab.charType)) {
+            Code.put(Code.bread);
+        }
+        else if (statementRead.getDesignator().obj.getType().equals(SymTab.intType)) {
+            Code.put(Code.read);
+        }
+        else if (statementRead.getDesignator().obj.getType().equals(SymTab.boolType)) {
+            Code.put(Code.read);
+        }
+        Code.store(statementRead.getDesignator().obj);
+    }
+
+    @Override
+    public void visit(StatementPrint statementPrint) {
+        Code.loadConst(0);
+        if (statementPrint.getExpr().struct.equals(SymTab.charType)) {
+            Code.put(Code.bprint);
+        }
+        else if (statementPrint.getExpr().struct.equals(SymTab.intType)) {
+            Code.put(Code.print);
+        }
+        else if (statementPrint.getExpr().struct.equals(SymTab.boolType)) {
+            Code.put(Code.print);
         }
     }
 
     @Override
-    public void visit(DesignatorLength designatorLength) {}
+    public void visit(StatementPrintWithNumber statementPrintWithNumber) {
+        Code.loadConst(statementPrintWithNumber.getNumber());
+        if (statementPrintWithNumber.getExpr().struct.equals(SymTab.charType)) {
+            Code.put(Code.bprint);
+        }
+        else if (statementPrintWithNumber.getExpr().struct.equals(SymTab.intType)) {
+            Code.put(Code.print);
+        }
+        else if (statementPrintWithNumber.getExpr().struct.equals(SymTab.boolType)) {
+            Code.put(Code.print);
+        }
+    }
+
+    /* Designator Statements */
+
+    @Override
+    public void visit(DesignatorStatementAssign designatorStatementAssign) {
+        Code.store(designatorStatementAssign.getDesignator().obj);
+    }
+
+    @Override
+    public void visit(DesignatorStatementInc designatorStatementInc) {
+        if (designatorStatementInc.getDesignator().obj.getKind() == Obj.Elem) {
+            Code.put(Code.dup2);
+        }
+        Code.load(designatorStatementInc.getDesignator().obj);
+        Code.loadConst(1);
+        Code.put(Code.add);
+        Code.store(designatorStatementInc.getDesignator().obj);
+    }
+
+    @Override
+    public void visit(DesignatorStatementDec designatorStatementDec) {
+        if (designatorStatementDec.getDesignator().obj.getKind() == Obj.Elem) {
+            Code.put(Code.dup2);
+        }
+        Code.load(designatorStatementDec.getDesignator().obj);
+        Code.loadConst(1);
+        Code.put(Code.sub);
+        Code.store(designatorStatementDec.getDesignator().obj);
+    }
+
+    @Override
+    public void visit(DesignatorStatementFuncActPars designatorStatementFuncActPars) {
+        Code.put(Code.call);
+        Code.put2(designatorStatementFuncActPars.getDesignator().obj.getAdr() - Code.pc);
+
+        if (designatorStatementFuncActPars.getDesignator().obj.getType() != SymTab.noType) {
+            Code.put(Code.pop);
+        }
+    }
+
+    @Override
+    public void visit(DesignatorStatementFuncNoActPars designatorStatementFuncNoActPars) {
+        Code.put(Code.call);
+        Code.put2(designatorStatementFuncNoActPars.getDesignator().obj.getAdr() - Code.pc);
+
+        if (designatorStatementFuncNoActPars.getDesignator().obj.getType() != SymTab.noType) {
+            Code.put(Code.pop);
+        }
+    }
+
+    /* Expressions */
+
+    @Override
+    public void visit(ExpressionAddOpTerm expressionAddOpTerm) {
+        if (expressionAddOpTerm.getAddOp() instanceof AddOpPLUS) {
+            Code.put(Code.add);
+        }
+        else if (expressionAddOpTerm.getAddOp() instanceof AddOpMINUS) {
+            Code.put(Code.sub);
+        }
+    }
 
     @Override
     public void visit(ExpressionMinusTerm expressionMinusTerm) {
         Code.put(Code.neg);
     }
 
+    /* Terms */
+
     @Override
-    public void visit(DesignatorStatementAssign designatorStatementAssign) {
-        Code.store(designatorStatementAssign.getDesignator().obj);
+    public void visit(TermMulOpFactor termMulOpFactor) {
+        if (termMulOpFactor.getMulOp() instanceof MulOpMUL) {
+            Code.put(Code.mul);
+        }
+        else if (termMulOpFactor.getMulOp() instanceof MulOpDIV) {
+            Code.put(Code.div);
+        }
+        else if (termMulOpFactor.getMulOp() instanceof MulOpMOD) {
+            Code.put(Code.rem);
+        }
     }
+
+    /* Factors */
 
     @Override
     public void visit(FactorNumber factorNumber) {
@@ -120,11 +235,11 @@ public class CodeGenerator extends VisitorAdaptor {
     @Override
     public void visit(FactorNewType factorNewType) {
         Code.put(Code.newarray);
-        if (factorNewType.getType().struct.equals(Tab.intType)
-                || factorNewType.getType().struct.equals(SemanticAnalyzer.boolType)) {
+        if (factorNewType.getType().struct.equals(SymTab.intType)
+                || factorNewType.getType().struct.equals(SymTab.boolType)) {
             Code.put(1);
         }
-        else if (factorNewType.getType().struct.equals(Tab.charType)) {
+        else if (factorNewType.getType().struct.equals(SymTab.charType)) {
             Code.put(0);
         }
     }
@@ -141,118 +256,13 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put2(offset);
     }
 
-    @Override
-    public void visit(ExpressionAddOpTerm expressionAddOpTerm) {
-        if (expressionAddOpTerm.getAddOp() instanceof AddOpPLUS) {
-            Code.put(Code.add);
-        }
-        else if (expressionAddOpTerm.getAddOp() instanceof AddOpMINUS) {
-            Code.put(Code.sub);
-        }
-    }
+    /* Designator */
 
     @Override
-    public void visit(TermMulOpFactor termMulOpFactor) {
-        if (termMulOpFactor.getMulOp() instanceof MulOpMUL) {
-            Code.put(Code.mul);
-        }
-        else if (termMulOpFactor.getMulOp() instanceof MulOpDIV) {
-            Code.put(Code.div);
-        }
-        else if (termMulOpFactor.getMulOp() instanceof MulOpMOD) {
-            Code.put(Code.rem);
-        }
-    }
-
-    /* Statements */
-
-    @Override
-    public void visit(DesignatorStatementInc designatorStatementInc) {
-        if (designatorStatementInc.getDesignator().obj.getKind() == Obj.Elem) {
-            Code.put(Code.dup2);
-        }
-        Code.load(designatorStatementInc.getDesignator().obj);
-        Code.loadConst(1);
-        Code.put(Code.add);
-        Code.store(designatorStatementInc.getDesignator().obj);
-    }
-
-    @Override
-    public void visit(DesignatorStatementDec designatorStatementDec) {
-        if (designatorStatementDec.getDesignator().obj.getKind() == Obj.Elem) {
-            Code.put(Code.dup2);
-        }
-        Code.load(designatorStatementDec.getDesignator().obj);
-        Code.loadConst(1);
-        Code.put(Code.sub);
-        Code.store(designatorStatementDec.getDesignator().obj);
-    }
-
-    @Override
-    public void visit(StatementReturn statementReturn) {
-        Code.put(Code.exit);
-        Code.put(Code.return_);
-    }
-
-    @Override
-    public void visit(StatementRead statementRead) {
-        if (statementRead.getDesignator().obj.getType().equals(Tab.charType)) {
-            Code.put(Code.bread);
-        }
-        else if (statementRead.getDesignator().obj.getType().equals(Tab.intType)) {
-            Code.put(Code.read);
-        }
-        else if (statementRead.getDesignator().obj.getType().equals(SemanticAnalyzer.boolType)) {
-            Code.put(Code.read);
-        }
-        Code.store(statementRead.getDesignator().obj);
-    }
-
-    @Override
-    public void visit(StatementPrint statementPrint) {
-        Code.loadConst(0);
-        if (statementPrint.getExpr().struct.equals(Tab.charType)) {
-            Code.put(Code.bprint);
-        }
-        else if (statementPrint.getExpr().struct.equals(Tab.intType)) {
-            Code.put(Code.print);
-        }
-        else if (statementPrint.getExpr().struct.equals(SemanticAnalyzer.boolType)) {
-            Code.put(Code.print);
-        }
-    }
-
-    @Override
-    public void visit(StatementPrintWithNumber statementPrintWithNumber) {
-        Code.loadConst(statementPrintWithNumber.getNumber());
-        if (statementPrintWithNumber.getExpr().struct.equals(Tab.charType)) {
-            Code.put(Code.bprint);
-        }
-        else if (statementPrintWithNumber.getExpr().struct.equals(Tab.intType)) {
-            Code.put(Code.print);
-        }
-        else if (statementPrintWithNumber.getExpr().struct.equals(SemanticAnalyzer.boolType)) {
-            Code.put(Code.print);
-        }
-    }
-
-    @Override
-    public void visit(DesignatorStatementFuncActPars designatorStatementFuncActPars) {
-        Code.put(Code.call);
-        Code.put2(designatorStatementFuncActPars.getDesignator().obj.getAdr() - Code.pc);
-
-        if (designatorStatementFuncActPars.getDesignator().obj.getType() != Tab.noType) {
-            Code.put(Code.pop);
-        }
-    }
-
-    @Override
-    public void visit(DesignatorStatementFuncNoActPars designatorStatementFuncNoActPars) {
-        Code.put(Code.call);
-        Code.put2(designatorStatementFuncNoActPars.getDesignator().obj.getAdr() - Code.pc);
-
-        if (designatorStatementFuncNoActPars.getDesignator().obj.getType() != Tab.noType) {
-            Code.put(Code.pop);
+    public void visit(DesignatorIdent designatorIdent) {
+        if (designatorIdent.getParent() instanceof DesignatorArray
+                || designatorIdent.getParent() instanceof DesignatorLength) {
+            Code.load(designatorIdent.obj);
         }
     }
 

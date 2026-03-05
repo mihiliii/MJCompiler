@@ -69,7 +69,7 @@ terminal String IDENT;
 nonterminal Program, ProgramName, DeclList;
 nonterminal ConstDecl, ConstDeclNext, ConstDeclList;
 nonterminal VarDecl, VarDeclNext, VarDeclList;
-nonterminal EnumField, EnumName, EnumDecl, EnumDeclNext, EnumDeclList;
+nonterminal EnumName, EnumDecl, EnumDeclNext, EnumDeclList;
 nonterminal MethodDecl, MethodDeclList, MethodVarDeclList;
 nonterminal StatementList, Statement;
 nonterminal ActPars;
@@ -86,7 +86,7 @@ Program ::=
 ;
 
 ProgramName ::=
-    (ProgramName) IDENT:ident
+    (ProgramName) IDENT:name
 ;
 
 DeclList ::=
@@ -145,12 +145,8 @@ EnumDeclNext ::=
 ;
 
 EnumDecl ::=
-    (EnumDeclAssign) EnumField ASSIGN NUMBER:value
-|   (EnumDeclNonAssign) EnumField
-;
-
-EnumField ::=
-    (EnumField) IDENT:name
+    (EnumDeclNonAssign) IDENT:fieldName
+|   (EnumDeclAssign) IDENT:fieldName ASSIGN NUMBER:value
 ;
 
 MethodDeclList ::=
@@ -199,7 +195,7 @@ DesignatorStatement ::=
 
 ActPars ::=
     (ActParsExpr) Expr
-|   (ActParsCommaExpr) ActPars COMMA Expr
+|   (ActParsNext) ActPars COMMA Expr
 ;
 
 Expr ::=
@@ -236,7 +232,7 @@ Factor ::=
 
 Designator ::=
     (DesignatorIdent) IDENT:name
-|   (DesignatorField) Designator DOT IDENT:ident
+|   (DesignatorField) Designator DOT IDENT:fieldName
 |   (DesignatorLength) Designator DOT LENGTH:length
 |   (DesignatorArray) Designator LBRACKET Expr:expr RBRACKET
 ;

@@ -13,7 +13,8 @@ import org.apache.log4j.xml.DOMConfigurator;
 
 import rs.ac.bg.etf.pp1.ast.Program;
 import rs.ac.bg.etf.pp1.util.Log4JUtils;
-import rs.etf.pp1.symboltable.Tab;
+import rs.ac.bg.etf.pp1.symboltable.DumpSymTabVisitor;
+import rs.ac.bg.etf.pp1.symboltable.SymTab;
 
 public class MJSemanticTest {
 
@@ -43,13 +44,15 @@ public class MJSemanticTest {
             log.info("===================================");
 
             // Inicijalizacija tabele simbola
-            Tab.init();
+            SymTab.init();
 
             // Semanticka analiza
             SemanticAnalyzer semAnalyzer = new SemanticAnalyzer();
             program.traverseBottomUp(semAnalyzer);
 
-            Tab.dump();
+            DumpSymTabVisitor dumpVisitor = new DumpSymTabVisitor();
+
+            SymTab.dump(dumpVisitor);
 
             if (!parser.is_error_detected() && semAnalyzer.passed()) {
                 log.info("Parsiranje uspesno zavrseno!");
