@@ -8,6 +8,8 @@
 				<include name="sym.java"/>
 				<include name="ast/*"/>
 				<include name="*.class"/>
+				<include name="structs/*.class"/>
+				<include name="symboltable/*.class"/>
 			</fileset>
 		</delete>
 		<delete>
@@ -20,7 +22,7 @@
 	<target name="lexerGen" depends="delete">
 		<java jar="lib/JFlex.jar" fork="true">
 			<arg value="-d"/>
-			<arg value="./src/rs/ac/bg/etf/pp1"/>
+			<arg value="src/rs/ac/bg/etf/pp1"/>
 			<arg value="spec/mjlexer.lex"/>
 		</java>
 	</target>
