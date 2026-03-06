@@ -1,5 +1,13 @@
 // Test301
 
+// For input.txt 1 2 Result should be:
+// [java] 9
+// [java] 6
+// [java] 12
+// [java] b
+// [java] c
+// [java] 97331232-
+
 program test301
 
 enum Broj { NULA, JEDAN, PET=5, DESET=10}

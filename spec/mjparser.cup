@@ -74,6 +74,7 @@ nonterminal MethodDecl, MethodDeclList, MethodVarDeclList;
 nonterminal StatementList, Statement;
 nonterminal ActPars;
 nonterminal AssignOp, AddOp, RelOp, MulOp;
+nonterminal Colon;
 
 nonterminal rs.ac.bg.etf.pp1.Literal Const;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type, Factor, Term, Expression, CondFact, Expr;
@@ -200,7 +201,11 @@ ActPars ::=
 
 Expr ::=
     (ExprSingle) Expression
-|   (ExprTernary) CondFact QUESTION Expression COLON Expression
+|   (ExprTernary) CondFact QUESTION Expression Colon Expression
+;
+
+Colon ::=
+    (Colon) COLON:colon
 ;
 
 CondFact ::=

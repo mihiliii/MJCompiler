@@ -380,14 +380,19 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     public void visit(DesignatorStatementFuncActPars designatorStatementFuncActPars) {
         Obj designator = designatorStatementFuncActPars.getDesignator().obj;
 
-        if (designator != SymTab.noObj && designator.getKind() != Obj.Meth) {
+        if (designator == SymTab.noObj) {
+            actParsList.clear();
+            return;
+        }
+
+        if (designator.getKind() != Obj.Meth) {
             report_error("'" + designator.getName() + "' is not a method", designatorStatementFuncActPars);
             actParsList.clear();
             return;
         }
 
         if (designator.getLevel() != actParsList.size()) {
-            report_error("'" + designator.getName() + "' expects " + designator.getAdr() + " arguments, but "
+            report_error("'" + designator.getName() + "' expects " + designator.getLevel() + " arguments, but "
                     + actParsList.size() + " were given", designatorStatementFuncActPars);
             actParsList.clear();
             return;
@@ -409,13 +414,17 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     public void visit(DesignatorStatementFuncNoActPars designatorStatementFuncNoActPars) {
         Obj designator = designatorStatementFuncNoActPars.getDesignator().obj;
 
-        if (designator != SymTab.noObj && designator.getKind() != Obj.Meth) {
+        if (designator == SymTab.noObj) {
+            return;
+        }
+
+        if (designator.getKind() != Obj.Meth) {
             report_error("'" + designator.getName() + "' is not a method", designatorStatementFuncNoActPars);
             return;
         }
 
         if (designator.getLevel() != 0) {
-            report_error("'" + designator.getName() + "' expects " + designator.getAdr() + " arguments",
+            report_error("'" + designator.getName() + "' expects " + designator.getLevel() + " arguments",
                     designatorStatementFuncNoActPars);
         }
     }
@@ -425,6 +434,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     @Override
     public void visit(ActParsExpr actParsExpr) {
         actParsList.add(actParsExpr.getExpr().struct);
+    }
+
+    @Override
+    public void visit(ActParsNext actParsNext) {
+        actParsList.add(actParsNext.getExpr().struct);
     }
 
     /* Expr */
@@ -585,7 +599,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
 
         if (designator.getLevel() != 0) {
-            report_error("'" + designator.getName() + "' expects " + designator.getAdr() + " arguments",
+            report_error("'" + designator.getName() + "' expects " + designator.getLevel() + " arguments",
                     factorFuncNoActPars);
             factorFuncNoActPars.struct = SymTab.noType;
             return;
@@ -607,6 +621,13 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (designator.getKind() != Obj.Meth) {
             report_error("'" + designator.getName() + "' is not a method", factorFuncActPars);
             factorFuncActPars.struct = SymTab.noType;
+            actParsList.clear();
+            return;
+        }
+
+        if (designator.getLevel() != actParsList.size()) {
+            report_error("'" + designator.getName() + "' expects " + designator.getLevel() + " arguments, but "
+                    + actParsList.size() + " were given", factorFuncActPars);
             actParsList.clear();
             return;
         }

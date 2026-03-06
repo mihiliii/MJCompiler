@@ -1,5 +1,7 @@
 package rs.ac.bg.etf.pp1;
 
+import java.util.Stack;
+
 import org.apache.log4j.Logger;
 
 import rs.ac.bg.etf.pp1.ast.*;
@@ -10,8 +12,13 @@ import rs.ac.bg.etf.pp1.symboltable.SymTab;
 
 public class CodeGenerator extends VisitorAdaptor {
 
+    private static final int FIX_ADDR_VAL = -1;
+    private static final int JMP_BYTES = 2;
+
     private int mainPc;
     private int lengthAdr;
+
+    private Stack<Integer> fixAdrs = new Stack<>();
 
     public int getMainPc() {
         return mainPc;
@@ -169,6 +176,56 @@ public class CodeGenerator extends VisitorAdaptor {
         if (designatorStatementFuncNoActPars.getDesignator().obj.getType() != SymTab.noType) {
             Code.put(Code.pop);
         }
+    }
+
+    /* Expr */
+
+    @Override
+    public void visit(ExprTernary exprTernary) {
+        while (!fixAdrs.isEmpty()) {
+            Code.fixup(fixAdrs.pop());
+        }
+    }
+
+    /* CondFact */
+
+    @Override
+    public void visit(CondFactExpression condFactExpression) {
+        Code.loadConst(0);
+        Code.putFalseJump(Code.ne, FIX_ADDR_VAL);
+        fixAdrs.push(Code.pc - JMP_BYTES);
+    }
+
+    @Override
+    public void visit(CondFactRelOp condFactRelOp) {
+        if (condFactRelOp.getRelOp() instanceof RelOpEQ) {
+            Code.putFalseJump(Code.eq, FIX_ADDR_VAL);
+        }
+        else if (condFactRelOp.getRelOp() instanceof RelOpNEQ) {
+            Code.putFalseJump(Code.ne, FIX_ADDR_VAL);
+        }
+        else if (condFactRelOp.getRelOp() instanceof RelOpLT) {
+            Code.putFalseJump(Code.lt, FIX_ADDR_VAL);
+        }
+        else if (condFactRelOp.getRelOp() instanceof RelOpLTE) {
+            Code.putFalseJump(Code.le, FIX_ADDR_VAL);
+        }
+        else if (condFactRelOp.getRelOp() instanceof RelOpGT) {
+            Code.putFalseJump(Code.gt, FIX_ADDR_VAL);
+        }
+        else if (condFactRelOp.getRelOp() instanceof RelOpGTE) {
+            Code.putFalseJump(Code.ge, FIX_ADDR_VAL);
+        }
+        fixAdrs.push(Code.pc - JMP_BYTES);
+    }
+
+    @Override
+    public void visit(Colon colon) {
+        Code.putJump(FIX_ADDR_VAL);
+        while (!fixAdrs.isEmpty()) {
+            Code.fixup(fixAdrs.pop());
+        }
+        fixAdrs.push(Code.pc - JMP_BYTES);
     }
 
     /* Expressions */

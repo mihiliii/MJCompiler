@@ -1,0 +1,226 @@
+// =====================================================
+// Semantic Error Test Cases for SemanticAnalyzer.java
+// Each section targets a specific error check.
+// =====================================================
+
+program semanticErrors
+
+// ----- ERROR 1: Unknown type -----
+// visit(Type) -> "Unknown type [X]"
+UnknownType badVar1;
+
+// ----- ERROR 2: Name is not a type -----
+// visit(Type) -> "Name [X] is not a type"
+const int myConst = 5;
+myConst badVar2;
+
+// ----- ERROR 3a: Const type mismatch (int <- char) -----
+// visit(ConstDecl) -> "Cannot initialize constant of type [int] with value of type [char]"
+const int badConst1 = 'a';
+
+// ----- ERROR 3b: Const type mismatch (char <- int) -----
+const char badConst2 = 42;
+
+// ----- ERROR 3c: Const type mismatch (bool <- int) -----
+const bool badConst3 = 10;
+
+// ----- ERROR 4: Redefinition of variable (single) -----
+// visit(VarDeclSingle) -> "Redefinition of variable 'X'"
+int dupVar;
+int dupVar;
+
+// ----- ERROR 5: Redefinition of variable (array) -----
+// visit(VarDeclArray) -> "Redefinition of variable 'X'"
+int dupArr[];
+int dupArr[];
+
+// ----- ERROR 6: Duplicate enum field (with assignment) -----
+// visit(EnumDeclAssign) -> "Multiple enum fields with same name 'X'"
+enum DupEnum1 { VAL1=1, VAL1=2 }
+
+// ----- ERROR 7: Duplicate enum field (without assignment) -----
+// visit(EnumDeclNonAssign) -> "Multiple enum fields with same name 'X'"
+enum DupEnum2 { SAME, SAME }
+
+// ----- Valid declarations needed for method-body tests -----
+enum Boja { CRVENA, ZELENA=5, PLAVA }
+enum Velicina { S, M, L }
+int validInt;
+int validArr[];
+char validChar;
+bool validBool;
+
+// ----- ERROR 8: Redefinition of enum -----
+// visit(EnumName) -> "Redefinition of enum 'X'"
+enum Boja { A, B }
+
+{
+    // ----- ERROR 9: Redefinition of local variable -----
+    // visit(VarDeclSingle) -> "Redefinition of variable 'X'"
+    void testDupLocal()
+        int dup;
+        int dup;
+    {
+        print(0);
+    }
+
+    void main()
+        int localInt;
+        char localChar;
+        int localArr[];
+        bool localBool;
+        Boja localBoja;
+        Velicina localVelicina;
+    {
+        // ----- ERROR 10: Undeclared identifier -----
+        // visit(DesignatorIdent) -> "Undeclared identifier 'X'"
+        undeclaredVar = 5;
+
+        // ----- ERROR 11: Field access on non-enum -----
+        // visit(DesignatorField) -> "Name 'X' is not an enum"
+        localInt = validInt.field;
+
+        // ----- ERROR 12: Enum field not found -----
+        // visit(DesignatorField) -> "Enum 'X' does not have a field named 'Y'"
+        localInt = Boja.NEPOSTOJI;
+
+        // ----- ERROR 13: Array access on non-array -----
+        // visit(DesignatorArray) -> "Name 'X' is not an array"
+        localInt = validInt[0];
+
+        // ----- ERROR 14: Array index not int -----
+        // visit(DesignatorArray) -> "Array index is not of type [int]"
+        localInt = validArr['a'];
+
+        // ----- ERROR 15: .length on non-array -----
+        // visit(DesignatorLength) -> "Name 'X' is not an array"
+        localInt = validInt.length;
+
+        // ----- ERROR 16: Assign to non-variable (type name) -----
+        // visit(DesignatorStatementAssign) -> "Designator 'X' is not a variable"
+        Boja = 5;
+
+        // ----- ERROR 17: Assign type mismatch -----
+        // visit(DesignatorStatementAssign) -> "Cannot assign value of type [X] to variable of type [Y]"
+        localInt = validChar;
+
+        // ----- ERROR 18: AddOp with non-int operands -----
+        // visit(ExpressionAddOpTerm) -> "Operator '+' can only be user to [int] type operands"
+        // Using print() to avoid cascading assignment error
+        print('a' + 'b');
+
+        // ----- ERROR 19: Unary minus on non-int -----
+        // visit(ExpressionMinusTerm) -> "Operator '-' can only be user to [int] type operand"
+        print(-'x');
+
+        // ----- ERROR 20: MulOp with non-int operands -----
+        // visit(TermMulOpFactor) -> "Operator '*' can only be user to [int] type operands"
+        print('a' * 'b');
+
+        // ----- ERROR 21: Ternary branches have different types -----
+        // visit(ExprTernary) -> "Ternary operator expressions are not the same type"
+        print(true ? 1 : 'a');
+
+        // ----- ERROR 22: Ternary condition is not bool -----
+        // visit(ExprTernary) -> "Condition in ternary operator must be of type [bool]"
+        print(5 ? 1 : 2);
+
+        // ----- ERROR 23: RelOp on incompatible types -----
+        // visit(CondFactRelOp) -> "Types [X] and [Y] are not compatible"
+        // NOTE: No parens around condition - grammar only allows RelOp in CondFact inside ternary
+        print(1 > 'a' ? 10 : 20);
+
+        // ----- ERROR 24: RelOp (non eq/neq) on arrays -----
+        // visit(CondFactRelOp) -> "Operator 'X' cannot be applied to [array] type"
+        localArr = new int[3];
+        print(localArr > localArr ? 10 : 20);
+
+        // ----- ERROR 25: FactorNewType with non-int index -----
+        // visit(FactorNewType) -> "New array must be of type [int]"
+        localArr = new int['a'];
+
+        // ----- ERROR 26: Assign non-enum value to enum variable -----
+        // visit(DesignatorStatementAssign) -> enum var assigned a plain int
+        localBoja = 5;
+
+        // ----- ERROR 27: Assign enum field from wrong enum -----
+        // visit(DesignatorStatementAssign) -> "Enum value 'X' is not the same enum type"
+        localBoja = Velicina.S;
+
+        // ----- ERROR 28: read on non-variable (type name) -----
+        // visit(StatementRead) -> "Designator 'X' is not a variable"
+        read(Boja);
+
+        // ----- ERROR 29: read on non-variable (constant) -----
+        // visit(StatementRead) -> "Designator 'X' is not a variable"
+        read(myConst);
+
+        // ----- ERROR 30: read into non-int/char/bool type -----
+        // visit(StatementRead) -> "Cannot read into variable 'X' of type [Y]"
+        read(localBoja);
+
+        // ----- ERROR 31: print non-printable type (array) -----
+        // visit(StatementPrint) -> "Cannot print expression of type [X]"
+        print(localArr);
+
+        // ----- ERROR 32: print with width non-printable type (array) -----
+        // visit(StatementPrintWithNumber) -> "Cannot print expression of type [X]"
+        print(localArr, 5);
+
+        // ----- ERROR 33: ++ on non-variable (type name) -----
+        // visit(DesignatorStatementInc) -> "Designator 'X' is not a variable"
+        Boja++;
+
+        // ----- ERROR 34: ++ on non-int type -----
+        // visit(DesignatorStatementInc) -> "Operator '++' cannot be applied to variable 'X' of type [Y]"
+        localChar++;
+
+        // ----- ERROR 35: -- on non-variable (type name) -----
+        // visit(DesignatorStatementDec) -> "Designator 'X' is not a variable"
+        Boja--;
+
+        // ----- ERROR 36: -- on non-int type -----
+        // visit(DesignatorStatementDec) -> "Operator '--' cannot be applied to variable 'X' of type [Y]"
+        localChar--;
+
+        // ----- ERROR 37: Statement call with args on non-method -----
+        // visit(DesignatorStatementFuncActPars) -> "'X' is not a method"
+        validInt(5);
+
+        // ----- ERROR 38: Statement call wrong argument count -----
+        // visit(DesignatorStatementFuncActPars) -> "'X' expects N arguments, but M were given"
+        ord(1, 2);
+
+        // ----- ERROR 39: Statement call parameter type mismatch -----
+        // visit(DesignatorStatementFuncActPars) -> "Incompatible type of parameter N in method 'X'"
+        ord(5);
+
+        // ----- ERROR 40: Statement call (no args) on non-method -----
+        // visit(DesignatorStatementFuncNoActPars) -> "'X' is not a method"
+        validInt();
+
+        // ----- ERROR 41: Statement call (no args) method expects params -----
+        // visit(DesignatorStatementFuncNoActPars) -> "'X' expects N arguments"
+        ord();
+
+        // ----- ERROR 42: Factor call (no args) on non-method -----
+        // visit(FactorFuncNoActPars) -> "'X' is not a method"
+        print(validInt());
+
+        // ----- ERROR 43: Factor call (no args) method expects params -----
+        // visit(FactorFuncNoActPars) -> "'X' expects N arguments"
+        print(ord());
+
+        // ----- ERROR 44: Factor call (args) on non-method -----
+        // visit(FactorFuncActPars) -> "'X' is not a method"
+        print(validInt(5));
+
+        // ----- ERROR 45: Factor call (args) parameter type mismatch -----
+        // visit(FactorFuncActPars) -> "Incompatible type of parameter N in method 'X'"
+        print(ord(5));
+    }
+}
+
+// ----- ERROR 46: No main method -----
+// visit(Program) -> "Main method is needed to run program"
+// To test: rename 'main' above to 'notmain'
