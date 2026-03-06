@@ -1,8 +1,9 @@
-package rs.ac.bg.etf.pp1;
+package rs.ac.bg.etf.pp1.structs;
 
 import rs.etf.pp1.symboltable.concepts.*;
 
 public class Literal {
+
     private Struct type;
     private int value;
 

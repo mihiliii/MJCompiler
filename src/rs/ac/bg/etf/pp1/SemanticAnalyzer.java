@@ -1,10 +1,13 @@
 package rs.ac.bg.etf.pp1;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.apache.log4j.Logger;
 
 import rs.ac.bg.etf.pp1.ast.*;
+import rs.ac.bg.etf.pp1.structs.Declaration;
+import rs.ac.bg.etf.pp1.structs.Literal;
 import rs.ac.bg.etf.pp1.symboltable.*;
 import rs.ac.bg.etf.pp1.util.*;
 import rs.etf.pp1.symboltable.concepts.*;
@@ -20,8 +23,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private Obj currentMethod = null;
     private boolean hasMainMethod = false;
 
-    private Declarations declaration = new Declarations();
+    private Declaration declaration = new Declaration();
     private ArrayList<Struct> actParsList = new ArrayList<>();
+    private HashMap<Obj, Obj> enumConstMap = new HashMap<>();
 
     public void report_error(String message, SyntaxNode info) {
         errorDetected = true;
@@ -95,14 +99,14 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             type.struct = typeObj.getType();
         }
 
-        declaration.setCurrentTypeObj(typeObj);
+        declaration.setTypeObj(typeObj);
     }
 
     /* Const declarations */
 
     @Override
     public void visit(ConstDeclList constDeclList) {
-        declaration.setCurrentTypeObj(SymTab.noObj);
+        declaration.setTypeObj(SymTab.noObj);
     }
 
     @Override
@@ -112,13 +116,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (currentMethod != null) {
             report_error("Constants must be declared in global scope", constDecl);
         }
-        else if (declaration.getCurrentTypeObj().getType().assignableTo(literal.getType())) {
+        else if (declaration.getTypeObj().getType().assignableTo(literal.getType())) {
             declaration.initConst(constDecl.getIdent(), literal);
         }
         else {
-            report_error("Cannot initialize constant of type ["
-                    + Stringify.toString(declaration.getCurrentTypeObj().getType()) + "] with value of type ["
-                    + Stringify.toString(literal.getType()) + "]", constDecl);
+            report_error("Cannot initialize constant of type [" + Stringify.toString(declaration.getTypeObj().getType())
+                    + "] with value of type [" + Stringify.toString(literal.getType()) + "]", constDecl);
         }
     }
 
@@ -141,7 +144,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(VarDeclList varDeclList) {
-        declaration.setCurrentTypeObj(SymTab.noObj);
+        declaration.setTypeObj(SymTab.noObj);
     }
 
     @Override
@@ -187,10 +190,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(EnumDeclList enumDeclList) {
-        SymTab.chainLocalSymbols(declaration.getCurrentTypeObj().getType());
+        SymTab.chainLocalSymbols(declaration.getTypeObj().getType());
         SymTab.closeScope();
 
-        declaration.setCurrentTypeObj(SymTab.noObj);
+        declaration.setTypeObj(SymTab.noObj);
     }
 
     @Override
@@ -199,14 +202,14 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         if (currentMethod != null) {
             report_error("Enum '" + enumName.getName() + "' must be declared in global scope", enumName);
-            declaration.setCurrentTypeObj(SymTab.noObj);
+            declaration.setTypeObj(SymTab.noObj);
         }
         else if (object != SymTab.noObj) {
             report_error("Redefinition of enum '" + enumName.getName() + "'", enumName);
-            declaration.setCurrentTypeObj(SymTab.noObj);
+            declaration.setTypeObj(SymTab.noObj);
         }
         else {
-            declaration.setCurrentTypeObj(SymTab.insert(Obj.Type, enumName.getName(), new Struct(Struct.Enum)));
+            declaration.setTypeObj(SymTab.insert(Obj.Type, enumName.getName(), new Struct(Struct.Enum)));
             SymTab.openScope();
         }
     }
@@ -219,12 +222,13 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             report_error("Multiple enum fields with same name '" + object.getName() + "'", enumDeclAssign);
             return;
         }
-        if (declaration.getCurrentTypeObj().getType().getKind() != Struct.Enum) {
+        if (declaration.getTypeObj().getType().getKind() != Struct.Enum) {
             report_error("Current type is not an enum", enumDeclAssign);
             return;
         }
 
-        declaration.initEnumConst(enumDeclAssign.getFieldName(), enumDeclAssign.getValue());
+        Obj enumConstObj = declaration.initEnumConst(enumDeclAssign.getFieldName(), enumDeclAssign.getValue());
+        enumConstMap.put(enumConstObj, declaration.getTypeObj());
     }
 
     public void visit(EnumDeclNonAssign enumDeclNonAssign) {
@@ -235,12 +239,13 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             return;
         }
 
-        if (declaration.getCurrentTypeObj().getType().getKind() != Struct.Enum) {
+        if (declaration.getTypeObj().getType().getKind() != Struct.Enum) {
             report_error("Current type is not an enum", enumDeclNonAssign);
             return;
         }
 
-        declaration.initEnumConst(enumDeclNonAssign.getFieldName());
+        Obj enumConstObj = declaration.initEnumConst(enumDeclNonAssign.getFieldName());
+        enumConstMap.put(enumConstObj, declaration.getTypeObj());
     }
 
     /* Method declarations */
@@ -575,8 +580,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     public void visit(FactorDesignator factorDesignator) {
         Obj designator = factorDesignator.getDesignator().obj;
 
-        if (declaration.getEnumType(designator) != null) {
-            factorDesignator.struct = declaration.getEnumType(designator).getType();
+        Obj enumTypeObj = enumConstMap.get(designator);
+        if (enumTypeObj != null) {
+            factorDesignator.struct = enumTypeObj.getType();
             return;
         }
 

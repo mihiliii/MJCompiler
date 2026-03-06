@@ -2,6 +2,7 @@ package rs.ac.bg.etf.pp1;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -18,7 +19,7 @@ import rs.ac.bg.etf.pp1.symboltable.SymTab;
 import rs.ac.bg.etf.pp1.util.Log4JUtils;
 import rs.etf.pp1.mj.runtime.Code;
 
-public class MJCodeGeneratorTest {
+public class Compiler {
 
     static {
         DOMConfigurator.configure(Log4JUtils.instance().findLoggerConfigFile());
@@ -26,15 +27,19 @@ public class MJCodeGeneratorTest {
     }
 
     public static void main(String[] args) throws Exception {
+        Logger log = Logger.getLogger(Compiler.class);
 
-        Logger log = Logger.getLogger(MJCodeGeneratorTest.class);
+        if (args.length != 1) {
+            log.error("Compiler: No source file provided as argument");
+            return;
+        }
 
         Reader bufferedReader = null;
         try {
-            File sourceCode = new File("test/semantic_errors.mj");
-            log.info("Compiling source file: " + sourceCode.getAbsolutePath());
-
+            File sourceCode = new File(args[0]);
             bufferedReader = new BufferedReader(new FileReader(sourceCode));
+
+            log.info("Compiling source file: " + sourceCode.getAbsolutePath());
             Yylex lexer = new Yylex(bufferedReader);
 
             MJParser parser = new MJParser(lexer);
@@ -42,22 +47,19 @@ public class MJCodeGeneratorTest {
 
             Program program = (Program) (parseTreeRoot.value);
 
+            log.info("===================================");
             log.info(program.toString(""));
             log.info("===================================");
 
-            // Inicijalizacija tabele simbola
             SymTab.init();
 
-            // Semanticka analiza
             SemanticAnalyzer semAnalyzer = new SemanticAnalyzer();
             program.traverseBottomUp(semAnalyzer);
 
-            DumpSymTabVisitor dumpVisitor = new DumpSymTabVisitor();
-
-            SymTab.dump(dumpVisitor);
+            SymTab.dump(new DumpSymTabVisitor());
 
             if (!parser.is_error_detected() && semAnalyzer.passed()) {
-                log.info("Parsiranje uspesno zavrseno!");
+                log.info("Parser finished successfully!");
 
                 File objFile = new File("test/program.obj");
                 if (objFile.exists()) {
@@ -71,13 +73,17 @@ public class MJCodeGeneratorTest {
                 Code.mainPc = codeGenerator.getMainPc();
                 Code.write(new FileOutputStream(objFile));
 
-                log.info("Generisranje koda uspesno zavrseno!");
+                log.info("Code generating finished successfully!");
             }
             else {
-                log.error("Parsiranje NIJE uspesno zavrseno!");
+                log.error("Parser did not finish successfully!");
             }
 
-        } finally {
+        }
+        catch (FileNotFoundException e) {
+            log.error("Compiler: Source file not found " + args[0]);
+        }
+        finally {
             if (bufferedReader != null) {
                 try {
                     bufferedReader.close();

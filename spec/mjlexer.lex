@@ -76,4 +76,4 @@ import java_cup.runtime.Symbol;
 ("true" | "false")              { return new_symbol(sym.BOOL, yytext().equals("true") ? 1 : 0); }
 ([a-z]|[A-Z])[a-z|A-Z|0-9|_]*   { return new_symbol(sym.IDENT, yytext()); }
 
-. { System.err.println("Leksicka greska (" + yytext() + ") na liniji " + (yyline + 1) + " na koloni " + (yycolumn + 1) + "\n"); }
+. { System.err.println("Error (" + yytext() + ") line " + (yyline + 1) + " | column " + (yycolumn + 1) + "\n"); }
