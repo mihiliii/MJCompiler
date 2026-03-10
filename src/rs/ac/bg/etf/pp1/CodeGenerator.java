@@ -1,5 +1,7 @@
 package rs.ac.bg.etf.pp1;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
@@ -19,6 +21,8 @@ public class CodeGenerator extends VisitorAdaptor {
     private int lengthAdr;
 
     private Stack<Integer> fixAdrs = new Stack<>();
+    private HashMap<String, Integer> labelMap = new HashMap<>();
+    private HashMap<String, Stack<Integer>> gotoMap = new HashMap<>();
 
     public int getMainPc() {
         return mainPc;
@@ -126,6 +130,40 @@ public class CodeGenerator extends VisitorAdaptor {
         }
         else if (statementPrintWithNumber.getExpr().struct.equals(SymTab.boolType)) {
             Code.put(Code.print);
+        }
+    }
+
+    @Override
+    public void visit(StatementGotoLabel statementGotoLabel) {
+        String labelName = statementGotoLabel.getLabelIdent();
+
+        if (labelMap.containsKey(labelName)) {
+            Code.putJump(labelMap.get(labelName));
+        }
+        else {
+            Code.putJump(FIX_ADDR_VAL);
+            int adr = Code.pc - 2;
+
+            if (gotoMap.containsKey(labelName)) {
+                gotoMap.get(labelName).push(adr);
+            }
+            else {
+                Stack<Integer> stack = new Stack<>();
+                gotoMap.put(labelName, stack);
+                stack.push(adr);
+            }
+        }
+    }
+
+    @Override
+    public void visit(Label Label) {
+        String labelName = Label.getLabelName();
+        labelMap.put(labelName, Code.pc);
+
+        if (gotoMap.containsKey(labelName)) {
+            while (!gotoMap.get(labelName).isEmpty()) {
+                Code.fixup(gotoMap.get(labelName).pop());
+            }
         }
     }
 

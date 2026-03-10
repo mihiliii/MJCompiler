@@ -73,5 +73,11 @@ int a;
 		print(false ? bodovi + 20 : bodovi + 30);
 		print(bodovi > 10 ? '+' : '-');
 
+		goto Labela;
+
+		print('b');
+Labela: print('g');
+		print('a');
+
 	}
 }

@@ -2,6 +2,7 @@ package rs.ac.bg.etf.pp1;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import org.apache.log4j.Logger;
 
@@ -26,6 +27,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private Declaration declaration = new Declaration();
     private ArrayList<Struct> actParsList = new ArrayList<>();
     private HashMap<Obj, Obj> enumConstMap = new HashMap<>();
+    private HashSet<String> gotoSet = new HashSet<>();
+    private HashSet<String> labelSet = new HashSet<>();
 
     public void report_error(String message, SyntaxNode info) {
         errorDetected = true;
@@ -76,6 +79,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         if (hasMainMethod == false) {
             report_error("Main method is needed to run program", null);
+        }
+
+        if (!labelSet.containsAll(gotoSet)) {
+            report_error("Not all labels are declared in goto statements", program);
         }
 
         programObj = null;
@@ -318,6 +325,21 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             report_error("Cannot print expression of type [" + Stringify.toString(exprType) + "]",
                     statementPrintWithNumber);
         }
+    }
+
+    @Override
+    public void visit(StatementGotoLabel statementGotoLabel) {
+        gotoSet.add(statementGotoLabel.getLabelIdent());
+    }
+
+    @Override
+    public void visit(StatementLabel statementLabel) {
+        if (labelSet.contains(statementLabel.getLabel().getLabelName())) {
+            report_error("Multiple labels of same name in program: " + statementLabel.getLabel().getLabelName(),
+                    statementLabel);
+        }
+
+        labelSet.add(statementLabel.getLabel().getLabelName());
     }
 
     /* Designator Statements */

@@ -61,6 +61,7 @@ terminal PROG, RETURN, READ, PRINT, LENGTH, NEW, CONST, ENUM, VOID;
 terminal ASSIGN, MUL, DIV, MOD, MINUS, PLUS, INC, DEC, EQ, NEQ, GT, GTE, LT, LTE, QUESTION;
 terminal LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET;
 terminal DOT, COLON, COMMA, SEMI;
+terminal GOTO;
 terminal Integer NUMBER;
 terminal Integer BOOL;
 terminal Character CHAR;
@@ -78,6 +79,8 @@ nonterminal AssignOp, AddOp, RelOp, MulOp, Colon;
 nonterminal rs.ac.bg.etf.pp1.structs.Literal Const;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type, Factor, Term, Expression, CondFact, Expr;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorStatement, MethodName;
+
+nonterminal Label;
 
 
 Program ::=
@@ -181,6 +184,8 @@ Statement ::=
 |   (StatementRead) READ LPAREN Designator RPAREN SEMI
 |   (StatementPrint) PRINT LPAREN Expr RPAREN SEMI
 |   (StatementPrintWithNumber) PRINT LPAREN Expr COMMA NUMBER:number RPAREN SEMI
+|   (StatementGotoLabel) GOTO IDENT:labelIdent SEMI
+|   (StatementLabel) Label COLON Statement
 ;
 
 DesignatorStatement ::=
@@ -262,4 +267,8 @@ MulOp ::=
     (MulOpMUL) MUL
 |   (MulOpDIV) DIV
 |   (MulOpMOD) MOD
+;
+
+Label ::=
+    (Label) IDENT:labelName
 ;
